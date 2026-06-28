@@ -1,0 +1,288 @@
+#include "WebUIManager.h"
+#include <ArduinoJson.h>
+
+const char index_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>AskalMiniBot Controller</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #fff; margin: 0; padding: 0; overflow: hidden; }
+    
+    /* Top Centered UI */
+    .top-center-ui { display: flex; flex-direction: column; align-items: center; padding-top: 15px; z-index: 10; position: relative; }
+    .main-title { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
+    #status { font-size: 12px; color: #ff4444; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
+    #fs-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: #aaa; font-size: 28px; cursor: pointer; transition: color 0.2s; padding: 5px; }
+    #fs-btn:hover { color: #00ffcc; }
+    
+    /* Floating Tabs */
+    .floating-tabs { display: flex; gap: 15px; margin-bottom: 10px; }
+    .floating-tab { background: #222; color: #fff; border: 2px solid #444; padding: 10px 25px; border-radius: 20px; cursor: pointer; font-weight: bold; transition: all 0.2s; font-size: 14px; }
+    .floating-tab.active { background: #00ffcc; color: #000; border-color: #00ffcc; box-shadow: 0 0 10px rgba(0, 255, 204, 0.5); }
+    
+    .content { padding: 10px; display: none; height: calc(100vh - 130px); overflow-y: auto; box-sizing: border-box; }
+    .content.active { display: block; }
+    #control.active { display: block; overflow: hidden; padding: 0; position: relative; }
+    
+    .joystick-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0 5%; box-sizing: border-box; z-index: 100; pointer-events: none; }
+    #left-zone, #right-zone { width: 170px; height: 170px; background: rgba(255, 255, 255, 0.05); border-radius: 50%; border: 2px solid #444; position: relative; touch-action: none; pointer-events: auto; }
+    
+    .center-controls { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 150; pointer-events: none; }
+    
+    .form-group { margin-bottom: 25px; }
+    label { display: block; margin-bottom: 8px; color: #aaa; font-size: 14px; }
+    input[type="number"] { width: 100%; padding: 12px; background: #222; border: 1px solid #444; color: #fff; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
+    input[type="range"] { width: 100%; height: 25px; margin: 10px 0; }
+    input[type="checkbox"] { margin-right: 10px; width: 20px; height: 20px; vertical-align: middle; }
+    .checkbox-label { display: inline-flex; align-items: center; font-size: 16px; color: #eee; }
+    .mode-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; width: 100%; pointer-events: auto; }
+    .mode-btn { background: #222; color: #fff; border: 2px solid #333; width: 60px; height: 60px; display: flex; justify-content: center; align-items: center; cursor: pointer; border-radius: 12px; font-weight: bold; font-size: 13px; padding: 0; }
+    .mode-btn.active { background: #00ffcc; color: #000; border-color: #00ffcc; box-shadow: 0 0 10px rgba(0, 255, 204, 0.5); }
+    
+    h3 { margin-top: 20px; border-bottom: 1px solid #444; padding-bottom: 5px; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
+</head>
+<body>
+  <div class="top-center-ui">
+    <button id="fs-btn" onclick="toggleFullScreen()" title="Toggle Fullscreen">&#9974;</button>
+    <div class="main-title">AskalMiniBot</div>
+    <div id="status">Disconnected</div>
+    <div class="floating-tabs">
+      <button class="floating-tab active" onclick="switchTab('control', this)">Control</button>
+      <button class="floating-tab" onclick="switchTab('settings', this)">Settings</button>
+    </div>
+  </div>
+
+  <div id="control" class="content active">
+    <!-- Joysticks in the middle -->
+    <div class="joystick-container">
+      <div id="left-zone"></div>
+      <div id="right-zone"></div>
+    </div>
+    
+    <!-- All movement buttons clustered in the dead center between joysticks -->
+    <div class="center-controls">
+      <div class="mode-row">
+        <button class="mode-btn active" onclick="setMode(0, this)">Trot</button>
+        <button class="mode-btn" onclick="setMode(1, this)">Walk</button>
+        <button class="mode-btn" onclick="setMode(2, this)">Gallop</button>
+      </div>
+      <div class="mode-row" style="margin-top: 15px;">
+        <button class="mode-btn" onclick="setMode(3, this)">Sit</button>
+        <button class="mode-btn" onclick="setMode(4, this)">Stretch</button>
+        <button class="mode-btn" onclick="setMode(5, this)">Wave</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="settings" class="content">
+    <div id="config-form">
+      <h3>Servo Configuration</h3>
+      <script>
+        for (let i = 0; i < 4; i++) {
+          document.write(`
+              <div style="background: #2a2a2a; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+                <h4 style="margin-top:0;">Servo ${i}</h4>
+                <div class="form-group"><label>Pin:</label><input type="number" id="s${i}_pin" onchange="saveConfig()" /></div>
+                <div class="form-group">
+                  <label>Offset: <span id="s${i}_off_val">0</span>&deg;</label>
+                  <input type="range" id="s${i}_off" min="-90" max="90" value="0" oninput="updateVal(${i}); saveConfig()" />
+                </div>
+                <div class="form-group"><label class="checkbox-label"><input type="checkbox" id="s${i}_inv" onchange="saveConfig()" /> Invert Direction</label></div>
+              </div>
+            `);
+          }
+          function updateVal(i) {
+            document.getElementById(`s${i}_off_val`).innerText = document.getElementById(`s${i}_off`).value;
+          }
+        </script>
+      </div>
+  </div>
+
+  <script>
+    let ws;
+    let joys = { throttle: 0, yaw: 0, pitch: 0, roll: 0 };
+    let lastJoys = { throttle: 0, yaw: 0, pitch: 0, roll: 0 };
+    let idleSent = false;
+
+    function initWebSocket() {
+      ws = new WebSocket(`ws://${window.location.hostname}/ws`);
+      ws.onopen = () => { document.getElementById('status').innerText = 'Connected'; document.getElementById('status').style.color = '#00ffcc'; getConfig(); };
+      ws.onclose = () => { document.getElementById('status').innerText = 'Disconnected'; document.getElementById('status').style.color = '#ff4444'; setTimeout(initWebSocket, 2000); };
+      ws.onmessage = (event) => {
+        let data = JSON.parse(event.data);
+        if (data.type === 'config') {
+          for(let i=0; i<4; i++) {
+            document.getElementById(`s${i}_pin`).value = data.servos[i].pin;
+            document.getElementById(`s${i}_off`).value = data.servos[i].offset;
+            document.getElementById(`s${i}_off_val`).innerText = data.servos[i].offset;
+            document.getElementById(`s${i}_inv`).checked = data.servos[i].invert;
+          }
+        }
+      };
+    }
+
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.floating-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+      if(btn) btn.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    }
+
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.log(`Error attempting to enable fullscreen: ${err.message}`);
+        });
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+
+    // Init Joysticks
+    let optionsLeft = { zone: document.getElementById('left-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: '#00ffcc' };
+    let optionsRight = { zone: document.getElementById('right-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: '#00ffcc' };
+    let managerLeft = nipplejs.create(optionsLeft);
+    let managerRight = nipplejs.create(optionsRight);
+
+    managerLeft.on('move', (evt, data) => { 
+      if (data && data.vector) {
+        joys.yaw = data.vector.x * 100;
+        joys.throttle = data.vector.y * 100;
+      } else if (data && data.angle && data.distance != null) {
+        joys.yaw = Math.cos(data.angle.radian) * (data.distance / 50) * 100; 
+        joys.throttle = Math.sin(data.angle.radian) * (data.distance / 50) * 100; 
+      }
+      idleSent = false;
+    });
+    managerLeft.on('end', () => { joys.yaw = 0; joys.throttle = 0; });
+    managerRight.on('move', (evt, data) => { 
+      if (data && data.vector) {
+        joys.roll = data.vector.x * 100;
+        joys.pitch = data.vector.y * 100;
+      } else if (data && data.angle && data.distance != null) {
+        joys.roll = Math.cos(data.angle.radian) * (data.distance / 50) * 100; 
+        joys.pitch = Math.sin(data.angle.radian) * (data.distance / 50) * 100; 
+      }
+      idleSent = false;
+    });
+    managerRight.on('end', () => { joys.roll = 0; joys.pitch = 0; });
+
+    setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        let isIdle = joys.throttle === 0 && joys.yaw === 0 && joys.pitch === 0 && joys.roll === 0;
+        
+        // Only send if we are NOT idle, OR if we just became idle (need to send zeros once)
+        if (!isIdle || !idleSent) {
+          ws.send(JSON.stringify({ type: 'joystick', t: joys.throttle, y: joys.yaw, p: joys.pitch, r: joys.roll }));
+          if (isIdle) idleSent = true;
+        }
+      }
+    }, 50);
+
+    function getConfig() { ws.send(JSON.stringify({ type: 'get_config' })); }
+    
+    function setMode(idx, btn) {
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      ws.send(JSON.stringify({ type: 'set_mode', mode: idx }));
+    }
+
+    function saveConfig() {
+      let cfg = { type: 'set_config', servos: [] };
+      for(let i=0; i<4; i++) {
+        let pinVal = document.getElementById(`s${i}_pin`).value;
+        let offVal = document.getElementById(`s${i}_off`).value;
+        if(pinVal === "") pinVal = 0;
+        cfg.servos.push({
+          pin: parseInt(pinVal),
+          offset: parseFloat(offVal),
+          invert: document.getElementById(`s${i}_inv`).checked
+        });
+      }
+      ws.send(JSON.stringify(cfg));
+    }
+
+    initWebSocket();
+  </script>
+</body>
+</html>
+)rawliteral";
+
+WebUIManager::WebUIManager(IInputReceiver& inputReceiver, IConfigRepository& configRepository)
+    : server(80), ws("/ws"), input(inputReceiver), config(configRepository) {}
+
+void WebUIManager::begin() {
+    ws.onEvent([this](AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
+        if (type == WS_EVT_DATA) {
+            this->handleWebSocketMessage(arg, data, len, client);
+        }
+    });
+    
+    server.addHandler(&ws);
+
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->send(200, "text/html", index_html);
+    });
+
+    server.begin();
+}
+
+void WebUIManager::loop() {
+    ws.cleanupClients();
+}
+
+void WebUIManager::handleWebSocketMessage(void *arg, uint8_t *data, size_t len, AsyncWebSocketClient *client) {
+    AwsFrameInfo *info = (AwsFrameInfo*)arg;
+    if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
+        data[len] = 0;
+        
+        Serial.printf("[WebUI] Received: %s\n", (char*)data);
+        
+        JsonDocument doc;
+        DeserializationError error = deserializeJson(doc, (char*)data);
+        if (error) return;
+
+        const char* type = doc["type"];
+        if (strcmp(type, "joystick") == 0) {
+            float t = doc["t"];
+            float y = doc["y"];
+            float p = doc["p"];
+            float r = doc["r"];
+            input.onJoystickUpdate(t, y, p, r);
+        } else if (strcmp(type, "get_config") == 0) {
+            JsonDocument outDoc;
+            outDoc["type"] = "config";
+            JsonArray servos = outDoc["servos"].to<JsonArray>();
+            for (int i = 0; i < 4; i++) {
+                ServoConfig cfg = config.getServoConfig(i);
+                JsonObject s = servos.add<JsonObject>();
+                s["pin"] = cfg.pin;
+                s["offset"] = cfg.offset;
+                s["invert"] = (cfg.invert == -1); // true if inverted
+            }
+            String output;
+            serializeJson(outDoc, output);
+            client->text(output);
+        } else if (strcmp(type, "set_config") == 0) {
+            JsonArray servos = doc["servos"];
+            for (int i = 0; i < 4; i++) {
+                ServoConfig cfg = config.getServoConfig(i); // preserve other fields
+                cfg.pin = servos[i]["pin"];
+                cfg.offset = servos[i]["offset"];
+                cfg.invert = servos[i]["invert"] ? -1 : 1;
+                config.setServoConfig(i, cfg);
+            }
+            input.onConfigUpdated();
+        } else if (strcmp(type, "set_mode") == 0) {
+            int modeIdx = doc["mode"];
+            input.setGait(modeIdx);
+        }
+    }
+}
