@@ -15,6 +15,9 @@ public:
 
     // Call this in the main loop
     void tick();
+    
+    // Expose inputs for other components (like DisplayManager)
+    const JoystickData& getLatestInputs() const { return latestInputs; }
 
 private:
     void reattachServos();

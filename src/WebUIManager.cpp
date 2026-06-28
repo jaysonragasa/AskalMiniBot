@@ -9,7 +9,7 @@ const char index_html[] PROGMEM = R"rawliteral(
   <title>AskalMiniBot Controller</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #fff; margin: 0; padding: 0; overflow: hidden; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #fff; margin: 0; padding: 0; overflow: hidden; user-select: none; -webkit-user-select: none; }
     
     /* Top Centered UI */
     .top-center-ui { display: flex; flex-direction: column; align-items: center; padding-top: 15px; z-index: 10; position: relative; }
@@ -243,7 +243,7 @@ void WebUIManager::handleWebSocketMessage(void *arg, uint8_t *data, size_t len, 
     if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
         data[len] = 0;
         
-        Serial.printf("[WebUI] Received: %s\n", (char*)data);
+        // Serial.printf("[WebUI] Received: %s\n", (char*)data);
         
         JsonDocument doc;
         DeserializationError error = deserializeJson(doc, (char*)data);

@@ -81,7 +81,37 @@ void RobotKinematics::tick() {
         int targetAngles[4] = {90, 90, 90, 90};
         currentGait->calculate(dt, latestInputs, targetAngles);
         
-        bool useLimits = currentGait->applyLimits();
+        // --- Pitch Kinematic Overrides ---
+        // Empirical observation: DECREASING angle (< 90) moves leg BACKWARD.
+        if (abs(latestInputs.pitch) > 5.0f && abs(latestInputs.throttle) < 5.0f && abs(latestInputs.yaw) < 5.0f) 
+        {
+            float rollOffset = latestInputs.roll * 0.3f;
+            float magnitude = ((int)latestInputs.pitch) / 100.0f;
+            
+            // Note: DECREASING angle (- 30) moves the leg BACKWARD.
+            if (latestInputs.pitch > 5.0f) {
+                // PITCH UP (Joystick pushed UP -> Positive)
+                // Hind backward heavily (-30), Front neutral (90)
+
+                targetAngles[0] = 90 + rollOffset; // Front Left
+                targetAngles[1] = 90 - rollOffset; // Front Right
+                targetAngles[2] = 90 - (30 * magnitude) + rollOffset; // Hind Left
+                targetAngles[3] = 90 - (30 * magnitude) - rollOffset; // Hind Right
+            } 
+            else if (latestInputs.pitch < -5.0f) {
+                // PITCH DOWN (Joystick pulled DOWN -> Negative)
+                // Front backward heavily (-30), Hind backward slightly (-15)
+                magnitude = -magnitude;
+
+                targetAngles[0] = 90 + (30 * magnitude) + rollOffset; // Front Left
+                targetAngles[1] = 90 + (30 * magnitude) - rollOffset; // Front Right
+                targetAngles[2] = 90 + (15 * magnitude) + rollOffset; // Hind Left
+                targetAngles[3] = 90 + (15 * magnitude) - rollOffset; // Hind Right
+            }
+        }
+        
+        // We temporarily disable limits so our 60-degree bends aren't clamped back to 30.
+        bool useLimits = (abs(latestInputs.pitch) < 5.0f); 
         for (int i = 0; i < 4; i++) {
             driver.write(i, processAngle(i, targetAngles[i], useLimits));
         }

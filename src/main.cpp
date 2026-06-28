@@ -109,16 +109,13 @@ void loop() {
     // Update Kinematics/Servos
     robot.tick();
 
-    // Update Display (every 500ms)
-    unsigned long now = millis();
+    // Feed latest data to DisplayManager (it runs on Core 0 automatically)
 #ifdef ENABLE_OLED_DISPLAY
-    if (now - lastOledUpdate > 500) {
-        lastOledUpdate = now;
-        displayMgr.update(WiFi.localIP().toString(), currentLoopTime);
-    }
+    displayMgr.updateData(WiFi.localIP().toString(), currentLoopTime, robot.getLatestInputs());
 #endif
     
     // Serial Log (every 1000ms)
+    unsigned long now = millis();
     if (now - lastSerialLog > 1000) {
         lastSerialLog = now;
         Serial.printf("[System] Loop Time: %u ms\n", currentLoopTime);
