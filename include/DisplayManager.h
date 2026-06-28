@@ -11,7 +11,9 @@ enum class EyeEmotion {
     LAUGHING,
     SAD,
     CURIOUS,
-    SHOCKED
+    SHOCKED,
+    HAPPY,
+    ANGRY
 };
 
 struct EyeParams {
@@ -27,6 +29,8 @@ private:
     Adafruit_SSD1306 display;
     bool isInitialized;
     unsigned long bootTime;
+    
+    IConfigRepository& config;
 
     // Dual-core FreeRTOS task handle
     TaskHandle_t displayTaskHandle;
@@ -35,6 +39,7 @@ private:
     JoystickData currentInputs;
     String currentIpAddress;
     uint32_t currentLoopTimeMs;
+    int currentGaitIndex;
     
     // Eye Animation State
     EyeEmotion currentEmotion;
@@ -45,16 +50,31 @@ private:
     EyeParams rightEyeTarget;
     EyeParams leftEyeCurrent;
     EyeParams rightEyeCurrent;
+    
+    // Weather State
+    String weatherTemp;
+    String weatherCond;
+    String locationName;
+    unsigned long lastWeatherFetch;
+    float weatherAnimTime;
 
     static void displayTask(void* parameter);
     void renderEyes();
+    void renderWeather();
+    void fetchWeather();
+    
+    // Weather icon drawing helpers
+    void drawSun(int cx, int cy, float t);
+    void drawCloud(int cx, int cy, float t);
+    void drawRain(int cx, int cy, float t);
+    
     void updateEyeLogic(float dt);
 
 public:
-    DisplayManager();
+    DisplayManager(IConfigRepository& configRepo);
 
     void begin();
     
     // Called from main loop (Core 1) to pass data to the display manager (Core 0)
-    void updateData(const String& ipAddress, uint32_t loopTimeMs, const JoystickData& inputs);
+    void updateData(const String& ipAddress, uint32_t loopTimeMs, const JoystickData& inputs, int gaitIndex);
 };

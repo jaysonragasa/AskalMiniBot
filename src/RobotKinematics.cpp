@@ -4,8 +4,13 @@
 RobotKinematics::RobotKinematics(IServoDriver& servoDriver, IConfigRepository& configRepo, IGaitStrategy** gaitsArray, int count)
     : driver(servoDriver), config(configRepo), gaits(gaitsArray), numGaits(count) {
     currentGait = (count > 0) ? gaits[0] : nullptr;
+    currentGaitIndex = (count > 0) ? 0 : -1;
     latestInputs = {0.0f, 0.0f, 0.0f, 0.0f};
     lastTick = 0;
+    
+    if (currentGait) {
+        currentGait->reset();
+    }
 }
 
 void RobotKinematics::begin() {
@@ -20,8 +25,18 @@ void RobotKinematics::onConfigUpdated() {
 
 void RobotKinematics::setGait(int index) {
     if (index >= 0 && index < numGaits) {
-        currentGait = gaits[index];
+        if (currentGaitIndex != index) {
+            currentGait = gaits[index];
+            currentGaitIndex = index;
+            if (currentGait) {
+                currentGait->reset();
+            }
+        }
     }
+}
+
+int RobotKinematics::getGaitIndex() const {
+    return currentGaitIndex;
 }
 
 void RobotKinematics::reattachServos() {
@@ -110,8 +125,14 @@ void RobotKinematics::tick() {
             }
         }
         
-        // We temporarily disable limits so our 60-degree bends aren't clamped back to 30.
-        bool useLimits = (abs(latestInputs.pitch) < 5.0f); 
+        // Determine if limits should be applied
+        // If there's an active pitch override, we temporarily disable limits
+        // Otherwise, we respect what the current pose/gait requests
+        bool useLimits = currentGait->applyLimits(); 
+        if (abs(latestInputs.pitch) >= 5.0f || abs(latestInputs.roll) >= 5.0f) {
+            useLimits = false;
+        }
+        
         for (int i = 0; i < 4; i++) {
             driver.write(i, processAngle(i, targetAngles[i], useLimits));
         }

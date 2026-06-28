@@ -25,15 +25,18 @@ GallopGait gallopGait;
 SitPose sitPose;
 StretchPose stretchPose;
 WavePose wavePose;
+PeePose peePose;
+ScrapePose scrapePose;
+InfoPose infoPose;
 
-IGaitStrategy* allGaits[] = { &trotGait, &walkGait, &gallopGait, &sitPose, &stretchPose, &wavePose };
+IGaitStrategy* allGaits[] = { &trotGait, &walkGait, &gallopGait, &sitPose, &stretchPose, &wavePose, &peePose, &scrapePose, &infoPose };
 int numGaits = sizeof(allGaits) / sizeof(allGaits[0]);
 
 // High-level components injected with dependencies
 RobotKinematics robot(servoDriver, configRepo, allGaits, numGaits);
 WebUIManager webUI(robot, configRepo);
 #ifdef ENABLE_OLED_DISPLAY
-DisplayManager displayMgr;
+DisplayManager displayMgr(configRepo);
 #endif
 
 unsigned long lastOledUpdate = 0;
@@ -111,7 +114,7 @@ void loop() {
 
     // Feed latest data to DisplayManager (it runs on Core 0 automatically)
 #ifdef ENABLE_OLED_DISPLAY
-    displayMgr.updateData(WiFi.localIP().toString(), currentLoopTime, robot.getLatestInputs());
+    displayMgr.updateData(WiFi.localIP().toString(), currentLoopTime, robot.getLatestInputs(), robot.getGaitIndex());
 #endif
     
     // Serial Log (every 1000ms)

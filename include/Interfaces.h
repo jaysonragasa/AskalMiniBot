@@ -9,6 +9,8 @@ struct ServoConfig {
     float offset;
 };
 
+#include <Arduino.h>
+
 // Interface for saving and loading configurations
 class IConfigRepository {
 public:
@@ -16,6 +18,14 @@ public:
     virtual void begin() = 0;
     virtual ServoConfig getServoConfig(int index) = 0;
     virtual void setServoConfig(int index, const ServoConfig& config) = 0;
+    
+    // OpenWeather settings
+    virtual String getOpenWeatherKey() = 0;
+    virtual void setOpenWeatherKey(const String& key) = 0;
+    virtual float getLatitude() = 0;
+    virtual void setLatitude(float lat) = 0;
+    virtual float getLongitude() = 0;
+    virtual void setLongitude(float lon) = 0;
 };
 
 // Interface for controlling physical servos
@@ -43,6 +53,7 @@ public:
     virtual ~IGaitStrategy() = default;
     virtual void calculate(float dt, const JoystickData& inputs, int servoAngles[4]) = 0;
     virtual bool applyLimits() const { return true; }
+    virtual void reset() {} // Called when the gait is newly selected
 };
 
 // Interface for receiving joystick inputs (implemented by Kinematics)

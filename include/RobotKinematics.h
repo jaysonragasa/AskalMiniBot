@@ -18,6 +18,8 @@ public:
     
     // Expose inputs for other components (like DisplayManager)
     const JoystickData& getLatestInputs() const { return latestInputs; }
+    
+    int getGaitIndex() const;
 
 private:
     void reattachServos();
@@ -28,7 +30,8 @@ private:
     IGaitStrategy** gaits;
     int numGaits;
     IGaitStrategy* currentGait;
-
+    int currentGaitIndex;
+    
     JoystickData latestInputs;
     unsigned long lastTick;
 };

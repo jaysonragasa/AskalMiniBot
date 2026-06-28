@@ -61,3 +61,27 @@ void PreferencesConfig::setServoConfig(int index, const ServoConfig& config) {
         // maxAngle and enabled could also be saved if needed, but keeping it simple for now
     }
 }
+
+String PreferencesConfig::getOpenWeatherKey() {
+    return preferences.getString("ow_key", "");
+}
+
+void PreferencesConfig::setOpenWeatherKey(const String& key) {
+    preferences.putString("ow_key", key);
+}
+
+float PreferencesConfig::getLatitude() {
+    return preferences.getFloat("lat", 0.0f);
+}
+
+void PreferencesConfig::setLatitude(float lat) {
+    preferences.putFloat("lat", lat);
+}
+
+float PreferencesConfig::getLongitude() {
+    return preferences.getFloat("lon", 0.0f);
+}
+
+void PreferencesConfig::setLongitude(float lon) {
+    preferences.putFloat("lon", lon);
+}

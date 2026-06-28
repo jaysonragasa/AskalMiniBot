@@ -38,11 +38,20 @@ const char index_html[] PROGMEM = R"rawliteral(
     input[type="range"] { width: 100%; height: 25px; margin: 10px 0; }
     input[type="checkbox"] { margin-right: 10px; width: 20px; height: 20px; vertical-align: middle; }
     .checkbox-label { display: inline-flex; align-items: center; font-size: 16px; color: #eee; }
-    .mode-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; width: 100%; pointer-events: auto; }
-    .mode-btn { background: #222; color: #fff; border: 2px solid #333; width: 60px; height: 60px; display: flex; justify-content: center; align-items: center; cursor: pointer; border-radius: 12px; font-weight: bold; font-size: 13px; padding: 0; }
+    .mode-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; width: 100%; }
+    .mode-btn { pointer-events: auto; background: #222; color: #fff; border: 2px solid #333; width: 60px; height: 60px; display: flex; justify-content: center; align-items: center; cursor: pointer; border-radius: 12px; font-weight: bold; font-size: 13px; padding: 0; }
     .mode-btn.active { background: #00ffcc; color: #000; border-color: #00ffcc; box-shadow: 0 0 10px rgba(0, 255, 204, 0.5); }
     
     h3 { margin-top: 20px; border-bottom: 1px solid #444; padding-bottom: 5px; }
+    
+    /* Accordion styles */
+    .accordion { background-color: #2a2a2a; color: #fff; cursor: pointer; padding: 15px; width: 100%; border: none; text-align: left; outline: none; font-size: 16px; font-weight: bold; border-radius: 8px; margin-bottom: 5px; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; }
+    .accordion.active, .accordion:hover { background-color: #3a3a3a; }
+    .accordion::after { content: '\002B'; color: #00ffcc; font-weight: bold; font-size: 20px; }
+    .accordion.active { border-radius: 8px 8px 0 0; }
+    .accordion.active::after { content: "\2212"; }
+    .panel { padding: 0 15px; background-color: #1a1a1a; max-height: 0; overflow: hidden; transition: max-height 0.2s ease-out; border-radius: 0 0 8px 8px; margin-bottom: 10px; }
+    .panel-inner { padding: 15px 0; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
 </head>
@@ -76,6 +85,11 @@ const char index_html[] PROGMEM = R"rawliteral(
         <button class="mode-btn" onclick="setMode(4, this)">Stretch</button>
         <button class="mode-btn" onclick="setMode(5, this)">Wave</button>
       </div>
+      <div class="mode-row" style="margin-top: 15px;">
+        <button class="mode-btn" onclick="setMode(6, this)">Pee</button>
+        <button class="mode-btn" onclick="setMode(7, this)">Scrape</button>
+        <button class="mode-btn" onclick="setMode(8, this)">Info</button>
+      </div>
     </div>
   </div>
 
@@ -83,16 +97,19 @@ const char index_html[] PROGMEM = R"rawliteral(
     <div id="config-form">
       <h3>Servo Configuration</h3>
       <script>
+        const servoNames = ["Front-Left (0)", "Front-Right (1)", "Hind-Left (2)", "Hind-Right (3)"];
         for (let i = 0; i < 4; i++) {
           document.write(`
-              <div style="background: #2a2a2a; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
-                <h4 style="margin-top:0;">Servo ${i}</h4>
-                <div class="form-group"><label>Pin:</label><input type="number" id="s${i}_pin" onchange="saveConfig()" /></div>
-                <div class="form-group">
-                  <label>Offset: <span id="s${i}_off_val">0</span>&deg;</label>
-                  <input type="range" id="s${i}_off" min="-90" max="90" value="0" oninput="updateVal(${i}); saveConfig()" />
+              <button class="accordion">${servoNames[i]}</button>
+              <div class="panel">
+                <div class="panel-inner">
+                  <div class="form-group"><label>Pin:</label><input type="number" id="s${i}_pin" onchange="saveConfig()" /></div>
+                  <div class="form-group">
+                    <label>Offset: <span id="s${i}_off_val">0</span>&deg;</label>
+                    <input type="range" id="s${i}_off" min="-90" max="90" value="0" oninput="updateVal(${i}); saveConfig()" />
+                  </div>
+                  <div class="form-group"><label class="checkbox-label"><input type="checkbox" id="s${i}_inv" onchange="saveConfig()" /> Invert Direction</label></div>
                 </div>
-                <div class="form-group"><label class="checkbox-label"><input type="checkbox" id="s${i}_inv" onchange="saveConfig()" /> Invert Direction</label></div>
               </div>
             `);
           }
@@ -101,6 +118,19 @@ const char index_html[] PROGMEM = R"rawliteral(
           }
         </script>
       </div>
+      
+    <div id="weather-form" style="margin-top:20px;">
+      <h3>Integrations</h3>
+      <button class="accordion">OpenWeather API</button>
+      <div class="panel">
+        <div class="panel-inner">
+          <div class="form-group"><label>API Key:</label><input type="text" id="ow_key" onchange="saveWeatherConfig()" style="width:100%; padding:12px; background:#222; border:1px solid #444; color:#fff; border-radius:5px; box-sizing:border-box; font-size:16px;" /></div>
+          <div class="form-group"><label>Latitude:</label><input type="number" id="ow_lat" step="any" onchange="saveWeatherConfig()" /></div>
+          <div class="form-group"><label>Longitude:</label><input type="number" id="ow_lon" step="any" onchange="saveWeatherConfig()" /></div>
+          <button style="width: 100%; padding: 12px; background: #00ffcc; color: #000; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;" onclick="detectLocation()">Detect Location</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -122,6 +152,9 @@ const char index_html[] PROGMEM = R"rawliteral(
             document.getElementById(`s${i}_off_val`).innerText = data.servos[i].offset;
             document.getElementById(`s${i}_inv`).checked = data.servos[i].invert;
           }
+          document.getElementById('ow_key').value = data.ow_key || '';
+          document.getElementById('ow_lat').value = data.ow_lat || 0;
+          document.getElementById('ow_lon').value = data.ow_lon || 0;
         }
       };
     }
@@ -209,6 +242,52 @@ const char index_html[] PROGMEM = R"rawliteral(
       ws.send(JSON.stringify(cfg));
     }
 
+    async function detectLocation() {
+      try {
+        const response = await fetch('http://ip-api.com/json/');
+        const data = await response.json();
+        if (data && data.status === 'success') {
+          document.getElementById('ow_lat').value = data.lat;
+          document.getElementById('ow_lon').value = data.lon;
+          saveWeatherConfig();
+          alert("Location detected: " + data.city + ", " + data.country);
+        } else {
+          alert("Failed to detect location from IP.");
+        }
+      } catch (err) {
+        alert("Error fetching location: " + err.message);
+      }
+    }
+
+    function saveWeatherConfig() {
+      let cfg = {
+        type: 'set_weather_cfg',
+        ow_key: document.getElementById('ow_key').value,
+        ow_lat: parseFloat(document.getElementById('ow_lat').value) || 0.0,
+        ow_lon: parseFloat(document.getElementById('ow_lon').value) || 0.0
+      };
+      ws.send(JSON.stringify(cfg));
+    }
+    
+    // Accordion Logic
+    function setupAccordions() {
+      var acc = document.getElementsByClassName("accordion");
+      for (let i = 0; i < acc.length; i++) {
+        acc[i].addEventListener("click", function() {
+          this.classList.toggle("active");
+          var panel = this.nextElementSibling;
+          if (panel.style.maxHeight) {
+            panel.style.maxHeight = null;
+          } else {
+            panel.style.maxHeight = panel.scrollHeight + "px";
+          } 
+        });
+      }
+    }
+    
+    // Call this after DOM loads
+    setTimeout(setupAccordions, 100);
+
     initWebSocket();
   </script>
 </body>
@@ -267,6 +346,10 @@ void WebUIManager::handleWebSocketMessage(void *arg, uint8_t *data, size_t len, 
                 s["offset"] = cfg.offset;
                 s["invert"] = (cfg.invert == -1); // true if inverted
             }
+            outDoc["ow_key"] = config.getOpenWeatherKey();
+            outDoc["ow_lat"] = config.getLatitude();
+            outDoc["ow_lon"] = config.getLongitude();
+            
             String output;
             serializeJson(outDoc, output);
             client->text(output);
@@ -283,6 +366,10 @@ void WebUIManager::handleWebSocketMessage(void *arg, uint8_t *data, size_t len, 
         } else if (strcmp(type, "set_mode") == 0) {
             int modeIdx = doc["mode"];
             input.setGait(modeIdx);
+        } else if (strcmp(type, "set_weather_cfg") == 0) {
+            config.setOpenWeatherKey(doc["ow_key"]);
+            config.setLatitude(doc["ow_lat"]);
+            config.setLongitude(doc["ow_lon"]);
         }
     }
 }

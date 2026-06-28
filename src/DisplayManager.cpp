@@ -2,16 +2,19 @@
 #include "config.h"
 #include <Wire.h>
 #include <math.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
 
 // Helper for smooth exponential interpolation
 static void smoothApproach(float& current, float target, float speed, float dt) {
     current += (target - current) * speed * dt;
 }
 
-DisplayManager::DisplayManager() : display(OLED_WIDTH, OLED_HEIGHT, &Wire, -1), isInitialized(false), bootTime(0), displayTaskHandle(NULL) {
+DisplayManager::DisplayManager(IConfigRepository& configRepo) : display(OLED_WIDTH, OLED_HEIGHT, &Wire, -1), isInitialized(false), bootTime(0), config(configRepo), displayTaskHandle(NULL) {
     currentInputs = {0,0,0,0};
     currentIpAddress = "";
     currentLoopTimeMs = 0;
+    currentGaitIndex = -1;
     
     currentEmotion = EyeEmotion::IDLE;
     lastInputTime = 0;
@@ -59,10 +62,11 @@ void DisplayManager::begin() {
     );
 }
 
-void DisplayManager::updateData(const String& ipAddress, uint32_t loopTimeMs, const JoystickData& inputs) {
+void DisplayManager::updateData(const String& ipAddress, uint32_t loopTimeMs, const JoystickData& inputs, int gaitIndex) {
     currentIpAddress = ipAddress;
     currentLoopTimeMs = loopTimeMs;
     currentInputs = inputs;
+    currentGaitIndex = gaitIndex;
 }
 
 void DisplayManager::displayTask(void* parameter) {
@@ -94,8 +98,25 @@ void DisplayManager::displayTask(void* parameter) {
                 self->display.print(F("Loop: "));
                 self->display.print(self->currentLoopTimeMs);
                 self->display.println(F(" ms"));
+            } else if (self->currentGaitIndex == 8) { // INFO pose
+                if (self->lastWeatherFetch == 0 || now - self->lastWeatherFetch > 600000) {
+                    // Fetch every 10 mins or on first entry
+                    self->display.clearDisplay();
+                    self->display.setCursor(0, 20);
+                    self->display.setTextSize(1);
+                    self->display.println("Fetching");
+                    self->display.println("Weather...");
+                    self->display.display();
+                    
+                    self->fetchWeather();
+                    self->lastWeatherFetch = now;
+                }
+                self->display.clearDisplay();
+                self->weatherAnimTime += dt;
+                self->renderWeather();
             } else {
                 // Show Eyes
+                self->lastWeatherFetch = 0; // Reset fetch timer so it loads immediately next time
                 self->updateEyeLogic(dt);
                 self->renderEyes();
             }
@@ -115,7 +136,11 @@ void DisplayManager::updateEyeLogic(float dt) {
                      fabs(currentInputs.pitch) > 0.05f || 
                      fabs(currentInputs.roll) > 0.05f);
                      
-    if (hasInput) {
+    if (currentGaitIndex == 6) { // Pee
+        currentEmotion = EyeEmotion::HAPPY;
+    } else if (currentGaitIndex == 7) { // Scrape
+        currentEmotion = EyeEmotion::ANGRY;
+    } else if (hasInput) {
         lastInputTime = now;
         currentEmotion = EyeEmotion::IDLE; // Reset to IDLE/LOOKING when moving
     } else if (now - lastInputTime > 3000) {
@@ -225,4 +250,134 @@ void DisplayManager::renderEyes() {
     
     display.fillRoundRect(lx, ly, leftEyeCurrent.width, leftEyeCurrent.height, leftEyeCurrent.radius, SSD1306_WHITE);
     display.fillRoundRect(rx, ry, rightEyeCurrent.width, rightEyeCurrent.height, rightEyeCurrent.radius, SSD1306_WHITE);
+    
+    if (currentEmotion == EyeEmotion::ANGRY) {
+        // Draw black triangles to mask the top inner corners of the eyes
+        display.fillTriangle(lx + leftEyeCurrent.width/2, ly - 5, lx + leftEyeCurrent.width + 5, ly - 5, lx + leftEyeCurrent.width + 5, ly + leftEyeCurrent.height/2, SSD1306_BLACK);
+        display.fillTriangle(rx - 5, ly - 5, rx + rightEyeCurrent.width/2, ly - 5, rx - 5, ly + rightEyeCurrent.height/2, SSD1306_BLACK);
+    } else if (currentEmotion == EyeEmotion::HAPPY) {
+        // Draw black shapes to make a bottom half-circle mask (squinting up like ^_^)
+        display.fillRect(lx, ly + leftEyeCurrent.height/2 + 2, leftEyeCurrent.width, leftEyeCurrent.height/2, SSD1306_BLACK);
+        display.fillRect(rx, ry + rightEyeCurrent.height/2 + 2, rightEyeCurrent.width, rightEyeCurrent.height/2, SSD1306_BLACK);
+    }
+}
+
+void DisplayManager::fetchWeather() {
+    String apiKey = config.getOpenWeatherKey();
+    if (apiKey.length() == 0) {
+        weatherTemp = "No API Key";
+        weatherCond = "Go to Settings";
+        locationName = "";
+        return;
+    }
+    
+    float lat = config.getLatitude();
+    float lon = config.getLongitude();
+    
+    String url = "http://api.openweathermap.org/data/2.5/weather?lat=" + String(lat, 4) + "&lon=" + String(lon, 4) + "&appid=" + apiKey + "&units=metric";
+    
+    HTTPClient http;
+    http.begin(url);
+    int httpCode = http.GET();
+    if (httpCode == HTTP_CODE_OK) {
+        String payload = http.getString();
+        JsonDocument doc;
+        DeserializationError error = deserializeJson(doc, payload);
+        if (!error) {
+            float temp = doc["main"]["temp"];
+            const char* cond = doc["weather"][0]["main"];
+            const char* loc = doc["name"];
+            weatherTemp = String(temp, 1) + " C";
+            weatherCond = String(cond);
+            locationName = String(loc);
+        } else {
+            weatherTemp = "JSON Error";
+            weatherCond = "";
+            locationName = "";
+        }
+    } else {
+        weatherTemp = "HTTP " + String(httpCode);
+        weatherCond = "Failed";
+        locationName = "";
+    }
+    http.end();
+}
+
+void DisplayManager::drawSun(int cx, int cy, float t) {
+    // Draw center circle
+    display.fillCircle(cx, cy, 8, SSD1306_WHITE);
+    // Draw rotating rays
+    for (int i = 0; i < 8; i++) {
+        float angle = (i * PI / 4.0f) + (t * 0.5f); // Rotate slowly
+        int x1 = cx + cos(angle) * 11;
+        int y1 = cy + sin(angle) * 11;
+        int x2 = cx + cos(angle) * 16;
+        int y2 = cy + sin(angle) * 16;
+        display.drawLine(x1, y1, x2, y2, SSD1306_WHITE);
+    }
+}
+
+void DisplayManager::drawCloud(int cx, int cy, float t) {
+    // Bobbing motion
+    int bob = sin(t * 2.0f) * 2;
+    cy += bob;
+    
+    // Draw 3 overlapping filled circles to make a cloud
+    display.fillCircle(cx - 8, cy + 3, 6, SSD1306_WHITE);
+    display.fillCircle(cx, cy, 8, SSD1306_WHITE);
+    display.fillCircle(cx + 8, cy + 3, 6, SSD1306_WHITE);
+    // Fill the bottom gap
+    display.fillRect(cx - 8, cy + 3, 16, 6, SSD1306_WHITE);
+}
+
+void DisplayManager::drawRain(int cx, int cy, float t) {
+    drawCloud(cx, cy, t);
+    
+    // Raindrops falling animation
+    int bob = sin(t * 2.0f) * 2;
+    int base_y = cy + bob + 10;
+    
+    for (int i = -1; i <= 1; i++) {
+        int drop_x = cx + (i * 6);
+        // Offset each drop's phase
+        float drop_t = t * 15.0f + (i * 2.0f);
+        int drop_y = base_y + ((int)drop_t % 10);
+        display.drawLine(drop_x, drop_y, drop_x - 2, drop_y + 3, SSD1306_WHITE);
+    }
+}
+
+void DisplayManager::renderWeather() {
+    // Location Name at the top left
+    display.setTextSize(1);
+    display.setCursor(0, 0);
+    display.print("Loc: ");
+    display.println(locationName.length() > 0 ? locationName : "Unknown");
+    
+    // Temperature in the middle left
+    display.setTextSize(2);
+    display.setCursor(0, 20);
+    display.println(weatherTemp);
+    
+    // Condition text at bottom left
+    display.setTextSize(1);
+    display.setCursor(0, 45);
+    display.println(weatherCond);
+    
+    // Animated Icon on the right side
+    int iconX = 95;
+    int iconY = 32;
+    
+    String lowerCond = weatherCond;
+    lowerCond.toLowerCase();
+    
+    if (lowerCond.indexOf("rain") >= 0 || lowerCond.indexOf("drizzle") >= 0 || lowerCond.indexOf("thunderstorm") >= 0) {
+        drawRain(iconX, iconY, weatherAnimTime);
+    } else if (lowerCond.indexOf("cloud") >= 0) {
+        drawCloud(iconX, iconY, weatherAnimTime);
+    } else if (lowerCond.indexOf("clear") >= 0) {
+        drawSun(iconX, iconY, weatherAnimTime);
+    } else {
+        // Default to cloud if unknown
+        drawCloud(iconX, iconY, weatherAnimTime);
+    }
 }
