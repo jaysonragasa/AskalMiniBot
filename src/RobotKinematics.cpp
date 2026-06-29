@@ -7,6 +7,8 @@ RobotKinematics::RobotKinematics(IServoDriver& servoDriver, IConfigRepository& c
     currentGaitIndex = (count > 0) ? 0 : -1;
     latestInputs = {0.0f, 0.0f, 0.0f, 0.0f};
     lastTick = 0;
+    transitionProgress = 0.0f;
+    pendingGaitIndex = -1;
     
     if (currentGait) {
         currentGait->reset();
@@ -25,17 +27,27 @@ void RobotKinematics::onConfigUpdated() {
 
 void RobotKinematics::setGait(int index) {
     if (index >= 0 && index < numGaits) {
-        if (currentGaitIndex != index) {
-            currentGait = gaits[index];
-            currentGaitIndex = index;
-            if (currentGait) {
-                currentGait->reset();
+        if (currentGaitIndex != index && pendingGaitIndex != index) {
+            // Check if we are transitioning from a folded pose (Sit, Wave, Info) to a non-folded pose
+            if (currentGait && currentGait->isFoldedPose() && !gaits[index]->isFoldedPose()) {
+                // Set pending state to inject a smooth "Stretch" pose via tick()
+                pendingGaitIndex = index;
+                transitionProgress = 0.01f; // Start transition
+            } else {
+                currentGait = gaits[index];
+                currentGaitIndex = index;
+                if (currentGait) {
+                    currentGait->reset();
+                }
+                transitionProgress = 0.0f;
+                pendingGaitIndex = -1;
             }
         }
     }
 }
 
 int RobotKinematics::getGaitIndex() const {
+    if (transitionProgress > 0.0f) return pendingGaitIndex;
     return currentGaitIndex;
 }
 
@@ -91,6 +103,35 @@ void RobotKinematics::tick() {
     unsigned long now = millis();
     float dt = (now - lastTick) / 1000.0f;
     lastTick = now;
+    
+    // Handle smooth stretch transition
+    if (transitionProgress > 0.0f) {
+        transitionProgress += dt * 1.5f; // Completes in ~0.66 seconds
+        
+        if (transitionProgress >= 1.0f) {
+            // Transition finished, apply the pending gait
+            currentGait = gaits[pendingGaitIndex];
+            currentGaitIndex = pendingGaitIndex;
+            if (currentGait) currentGait->reset();
+            
+            transitionProgress = 0.0f;
+            pendingGaitIndex = -1;
+        } else {
+            // Front legs instantly stretch forward
+            int frontAngle = 30;
+            
+            // Hind legs slowly interpolate from folded (30) to stretched back (150)
+            int hindStart = 30;
+            int hindEnd = 150;
+            int hindAngle = hindStart + (hindEnd - hindStart) * transitionProgress;
+            
+            driver.write(0, processAngle(0, frontAngle, false));
+            driver.write(1, processAngle(1, frontAngle, false));
+            driver.write(2, processAngle(2, hindAngle, false));
+            driver.write(3, processAngle(3, hindAngle, false));
+            return; // Skip normal kinematic calculations while transitioning
+        }
+    }
     
     if (currentGait) {
         int targetAngles[4] = {90, 90, 90, 90};

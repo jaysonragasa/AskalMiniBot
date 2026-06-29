@@ -5,6 +5,7 @@ class SitPose : public IGaitStrategy {
 public:
     void calculate(float dt, const JoystickData& inputs, int servoAngles[4]) override;
     bool applyLimits() const override { return false; }
+    bool isFoldedPose() const override { return true; }
 };
 
 class StretchPose : public IGaitStrategy {
@@ -21,6 +22,7 @@ public:
     void calculate(float dt, const JoystickData& inputs, int servoAngles[4]) override;
     bool applyLimits() const override { return false; }
     void reset() override;
+    bool isFoldedPose() const override { return true; }
 };
 
 class PeePose : public IGaitStrategy {
@@ -46,4 +48,5 @@ class InfoPose : public IGaitStrategy {
 public:
     void calculate(float dt, const JoystickData& inputs, int servoAngles[4]) override;
     bool applyLimits() const override { return false; }
+    bool isFoldedPose() const override { return true; }
 };

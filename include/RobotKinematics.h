@@ -32,6 +32,9 @@ private:
     IGaitStrategy* currentGait;
     int currentGaitIndex;
     
+    float transitionProgress;
+    int pendingGaitIndex;
+    
     JoystickData latestInputs;
     unsigned long lastTick;
 };

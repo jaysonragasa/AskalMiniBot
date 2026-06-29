@@ -54,6 +54,7 @@ public:
     virtual void calculate(float dt, const JoystickData& inputs, int servoAngles[4]) = 0;
     virtual bool applyLimits() const { return true; }
     virtual void reset() {} // Called when the gait is newly selected
+    virtual bool isFoldedPose() const { return false; } // Returns true if the pose folds the hind legs under the body
 };
 
 // Interface for receiving joystick inputs (implemented by Kinematics)
