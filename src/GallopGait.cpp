@@ -61,19 +61,20 @@ void GallopGait::calculate(float dt, const JoystickData& inputs, int servoAngles
     // -------------------------------------------------------------------------
     float leftAmp = inputs.throttle + inputs.yaw;
     float rightAmp = inputs.throttle - inputs.yaw;
-    float maxAmp = 45.0f; 
+    float maxAmp = 30.0f; // Reduced from 45.0f for stability
     
     leftAmp = (leftAmp / 100.0f) * maxAmp;
     rightAmp = (rightAmp / 100.0f) * maxAmp;
     
     // -------------------------------------------------------------------------
     // 4. BOUNDING (GALLOP) LOGIC
-    // In a gallop/bound, both front legs move exactly in sync (using sin(phase)),
-    // and both hind legs move exactly in sync but opposite to the front legs 
-    // (using sin(phase + PI)). This creates a rocking/bounding forward motion.
+    // Both front legs move in sync, and both hind legs move in sync.
+    // Instead of being exactly opposite (PI), the hind legs are offset by 3*PI/4
+    // (135 degrees). This creates a staggered "canter" where the hind legs start
+    // swinging forward just before the front legs finish their backward swing.
     // -------------------------------------------------------------------------
     float front = sin(phase);
-    float hind = sin(phase + M_PI);
+    float hind = sin(phase - M_PI * 0.75f);
     
     // -------------------------------------------------------------------------
     // 5. FINAL ANGLE CALCULATION
