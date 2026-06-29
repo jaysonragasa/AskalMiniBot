@@ -5,24 +5,28 @@ PreferencesConfig::PreferencesConfig() {
 }
 
 void PreferencesConfig::begin() {
+    // Open the "minibot" namespace in Read/Write mode
     preferences.begin("minibot", false);
     
-    // Check if initialized
+    // Check if we have initialized this ESP32 before
     if (!preferences.getBool("init", false)) {
+        // First boot: load hardcoded defaults from config.h and save them to NVS
         loadDefaults();
         preferences.putBool("init", true);
     } else {
+        // Subsequent boots: Load saved values into the RAM cache
         for (int i = 0; i < 4; i++) {
             char keyPin[16], keyOffset[16], keyInv[16];
             snprintf(keyPin, sizeof(keyPin), "s%d_pin", i);
             snprintf(keyOffset, sizeof(keyOffset), "s%d_off", i);
             snprintf(keyInv, sizeof(keyInv), "s%d_inv", i);
             
+            // Read from NVS, falling back to cached default if missing
             servoConfigs[i].pin = preferences.getInt(keyPin, getServoConfig(i).pin);
             servoConfigs[i].offset = preferences.getFloat(keyOffset, 0.0f);
             servoConfigs[i].invert = preferences.getChar(keyInv, 1);
             
-            // Check existence for keys that might not have been saved yet
+            // Fallback for newer config fields that might not exist in older NVS saves
             servoConfigs[i].maxAngle = preferences.isKey("s_maxA") ? preferences.getFloat("s_maxA", DEFAULT_SERVO_CONFIGS[i].maxAngle) : DEFAULT_SERVO_CONFIGS[i].maxAngle;
             servoConfigs[i].enabled = preferences.isKey("s_en") ? preferences.getChar("s_en", 1) : 1;
         }

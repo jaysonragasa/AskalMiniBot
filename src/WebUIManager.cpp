@@ -298,14 +298,23 @@ WebUIManager::WebUIManager(IInputReceiver& inputReceiver, IConfigRepository& con
     : server(80), ws("/ws"), input(inputReceiver), config(configRepository) {}
 
 void WebUIManager::begin() {
+    // -------------------------------------------------------------------------
+    // Set up WebSocket event handler
+    // We only care about WS_EVT_DATA (incoming messages from the browser).
+    // -------------------------------------------------------------------------
     ws.onEvent([this](AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
         if (type == WS_EVT_DATA) {
             this->handleWebSocketMessage(arg, data, len, client);
         }
     });
     
+    // Attach websocket to the async server
     server.addHandler(&ws);
 
+    // -------------------------------------------------------------------------
+    // Serve the main UI
+    // Renders the HTML string stored in PROGMEM when someone navigates to "/"
+    // -------------------------------------------------------------------------
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
         request->send(200, "text/html", index_html);
     });
@@ -314,28 +323,37 @@ void WebUIManager::begin() {
 }
 
 void WebUIManager::loop() {
+    // Disconnect dead clients and free memory. Needs to run frequently.
     ws.cleanupClients();
 }
 
 void WebUIManager::handleWebSocketMessage(void *arg, uint8_t *data, size_t len, AsyncWebSocketClient *client) {
     AwsFrameInfo *info = (AwsFrameInfo*)arg;
+    
+    // Check that we received a complete text frame
     if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
+        // Null-terminate the raw data so ArduinoJson can parse it safely
         data[len] = 0;
-        
-        // Serial.printf("[WebUI] Received: %s\n", (char*)data);
         
         JsonDocument doc;
         DeserializationError error = deserializeJson(doc, (char*)data);
-        if (error) return;
+        if (error) return; // Ignore malformed JSON
 
         const char* type = doc["type"];
+        
+        // ---------------------------------------------------------------------
+        // INCOMING ROUTING
+        // ---------------------------------------------------------------------
         if (strcmp(type, "joystick") == 0) {
-            float t = doc["t"];
-            float y = doc["y"];
-            float p = doc["p"];
-            float r = doc["r"];
+            // Virtual joystick update
+            float t = doc["t"]; // throttle
+            float y = doc["y"]; // yaw
+            float p = doc["p"]; // pitch
+            float r = doc["r"]; // roll
             input.onJoystickUpdate(t, y, p, r);
+            
         } else if (strcmp(type, "get_config") == 0) {
+            // Client requested current settings (happens on page load)
             JsonDocument outDoc;
             outDoc["type"] = "config";
             JsonArray servos = outDoc["servos"].to<JsonArray>();
@@ -353,20 +371,27 @@ void WebUIManager::handleWebSocketMessage(void *arg, uint8_t *data, size_t len, 
             String output;
             serializeJson(outDoc, output);
             client->text(output);
+            
         } else if (strcmp(type, "set_config") == 0) {
+            // User saved servo calibration settings in the UI
             JsonArray servos = doc["servos"];
             for (int i = 0; i < 4; i++) {
-                ServoConfig cfg = config.getServoConfig(i); // preserve other fields
+                ServoConfig cfg = config.getServoConfig(i); // preserve other fields like maxAngle
                 cfg.pin = servos[i]["pin"];
                 cfg.offset = servos[i]["offset"];
                 cfg.invert = servos[i]["invert"] ? -1 : 1;
                 config.setServoConfig(i, cfg);
             }
+            // Notify the kinematics system that calibration changed
             input.onConfigUpdated();
+            
         } else if (strcmp(type, "set_mode") == 0) {
+            // User clicked a gait/pose button
             int modeIdx = doc["mode"];
             input.setGait(modeIdx);
+            
         } else if (strcmp(type, "set_weather_cfg") == 0) {
+            // User saved weather API settings
             config.setOpenWeatherKey(doc["ow_key"]);
             config.setLatitude(doc["ow_lat"]);
             config.setLongitude(doc["ow_lon"]);

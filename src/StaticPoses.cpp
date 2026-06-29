@@ -1,27 +1,35 @@
 #include "StaticPoses.h"
 #include <math.h>
 void SitPose::calculate(float dt, const JoystickData& inputs, int servoAngles[4]) {
-    // Apply slight pitch/roll joystick tweaking if desired
+    // -------------------------------------------------------------------------
+    // The SitPose folds the hind legs completely underneath the robot (angle 30)
+    // while keeping the front legs straight down (angle 90).
+    // Joystick pitch and roll can still be used to dynamically tilt the robot.
+    // -------------------------------------------------------------------------
+    
+    // Calculate slight pitch/roll deviations (scaled down by 0.2f for subtlety)
     int pitchOffset = inputs.pitch * 0.2f;
     int rollOffset = inputs.roll * 0.2f;
     
-    // Front legs straight down, hind legs tucked forward under the belly
-    servoAngles[0] = 90 + pitchOffset + rollOffset;
-    servoAngles[1] = 90 + pitchOffset - rollOffset;
-    servoAngles[2] = 30 - pitchOffset + rollOffset;
-    servoAngles[3] = 30 - pitchOffset - rollOffset;
+    // Apply the base pose + joystick offsets
+    servoAngles[0] = 90 + pitchOffset + rollOffset;  // Front Left
+    servoAngles[1] = 90 + pitchOffset - rollOffset;  // Front Right
+    servoAngles[2] = 30 - pitchOffset + rollOffset;  // Hind Left (Folded)
+    servoAngles[3] = 30 - pitchOffset - rollOffset;  // Hind Right (Folded)
 }
 
 void StretchPose::calculate(float dt, const JoystickData& inputs, int servoAngles[4]) {
-    // Apply slight pitch/roll joystick tweaking if desired
+    // -------------------------------------------------------------------------
+    // The StretchPose extends all legs outward. Front legs point forward (30),
+    // and hind legs point backward (150). This lowers the robot's center of mass.
+    // -------------------------------------------------------------------------
     int pitchOffset = inputs.pitch * 0.2f;
     int rollOffset = inputs.roll * 0.2f;
     
-    // Front legs stretched forward, hind legs stretched backward (superman)
-    servoAngles[0] = 30 + pitchOffset + rollOffset;
-    servoAngles[1] = 30 + pitchOffset - rollOffset;
-    servoAngles[2] = 150 - pitchOffset + rollOffset;
-    servoAngles[3] = 150 - pitchOffset - rollOffset;
+    servoAngles[0] = 30 + pitchOffset + rollOffset;  // Front Left (Forward)
+    servoAngles[1] = 30 + pitchOffset - rollOffset;  // Front Right (Forward)
+    servoAngles[2] = 150 - pitchOffset + rollOffset; // Hind Left (Backward)
+    servoAngles[3] = 150 - pitchOffset - rollOffset; // Hind Right (Backward)
 }
 
 WavePose::WavePose() : phase(0.0f) {}
@@ -31,22 +39,24 @@ void WavePose::reset() {
 }
 
 void WavePose::calculate(float dt, const JoystickData& inputs, int servoAngles[4]) {
+    // -------------------------------------------------------------------------
+    // The WavePose makes the robot sit, lift its front-right leg, and oscillate it
+    // up and down (using a sine wave) to simulate waving.
+    // -------------------------------------------------------------------------
     int pitchOffset = inputs.pitch * 0.2f;
     int rollOffset = inputs.roll * 0.2f;
 
-    phase += 15.0f * dt; // Wave speed
+    // Advance the wave animation phase
+    phase += 15.0f * dt; 
     if (phase > 2 * 3.14159f) phase -= 2 * 3.14159f;
     
-    int waveAngle = sin(phase) * 35; // 35 degrees amplitude
+    // Calculate the waving amplitude (up to 35 degrees deviation)
+    int waveAngle = sin(phase) * 35; 
     
-    // Front-Left: Planted (sit)
-    servoAngles[0] = 90 + pitchOffset + rollOffset;
-    // Front-Right: Lifted up and waving
-    servoAngles[1] = 20 + waveAngle + pitchOffset - rollOffset;
-    
-    // Hind legs: Tucked under (sit)
-    servoAngles[2] = 30 - pitchOffset + rollOffset;
-    servoAngles[3] = 30 - pitchOffset - rollOffset;
+    servoAngles[0] = 90 + pitchOffset + rollOffset;                 // Front Left: Planted straight down
+    servoAngles[1] = 20 + waveAngle + pitchOffset - rollOffset;     // Front Right: Lifted (base 20) + waving
+    servoAngles[2] = 30 - pitchOffset + rollOffset;                 // Hind Left: Folded (sitting)
+    servoAngles[3] = 30 - pitchOffset - rollOffset;                 // Hind Right: Folded (sitting)
 }
 
 PeePose::PeePose() : elapsedTime(0.0f) {}
@@ -56,23 +66,28 @@ void PeePose::reset() {
 }
 
 void PeePose::calculate(float dt, const JoystickData& inputs, int servoAngles[4]) {
+    // -------------------------------------------------------------------------
+    // The PeePose simulates a dog lifting its hind leg. The animation runs for 
+    // exactly 4 seconds, after which it returns to a normal standing pose.
+    // -------------------------------------------------------------------------
     int pitchOffset = inputs.pitch * 0.2f;
     int rollOffset = inputs.roll * 0.2f;
 
     elapsedTime += dt;
 
     if (elapsedTime < 4.0f) {
-        // Front legs planted
-        servoAngles[0] = 90 + pitchOffset + rollOffset;
-        servoAngles[1] = 90 + pitchOffset - rollOffset;
-        // Hind left planted
-        servoAngles[2] = 90 - pitchOffset + rollOffset;
+        // Animation is active: plant 3 legs, lift and wag the hind-right leg
+        servoAngles[0] = 90 + pitchOffset + rollOffset; // Front Left
+        servoAngles[1] = 90 + pitchOffset - rollOffset; // Front Right
+        servoAngles[2] = 90 - pitchOffset + rollOffset; // Hind Left
         
-        // Hind right swings backward and oscillates up and down
+        // Calculate a wagging oscillation
         int wag = sin(elapsedTime * 15.0f) * 10;
-        servoAngles[3] = 130 + wag - pitchOffset - rollOffset; // Swing backwards (to 130 degrees) and wag
+        
+        // Hind right swings backward (130) and oscillates +/- 10 degrees
+        servoAngles[3] = 130 + wag - pitchOffset - rollOffset; 
     } else {
-        // Return to normal standing
+        // Animation finished: Return to normal standing position
         servoAngles[0] = 90 + pitchOffset + rollOffset;
         servoAngles[1] = 90 + pitchOffset - rollOffset;
         servoAngles[2] = 90 - pitchOffset + rollOffset;
@@ -83,23 +98,26 @@ void PeePose::calculate(float dt, const JoystickData& inputs, int servoAngles[4]
 ScrapePose::ScrapePose() : phase(0.0f) {}
 
 void ScrapePose::calculate(float dt, const JoystickData& inputs, int servoAngles[4]) {
+    // -------------------------------------------------------------------------
+    // The ScrapePose simulates an angry bull scraping the ground.
+    // Front legs are planted, and the hind legs rapidly alternate swinging back and forth.
+    // -------------------------------------------------------------------------
     int pitchOffset = inputs.pitch * 0.2f;
     int rollOffset = inputs.roll * 0.2f;
 
-    phase += 15.0f * dt; // Fast sweeping speed
+    phase += 15.0f * dt; // Fast sweeping animation speed
     if (phase > 2 * 3.14159f) phase -= 2 * 3.14159f;
 
-    // We want a sawtooth-like or fast sweep backward, slow forward.
-    // A sine wave is okay for now, we just make the amplitude large.
-    // Hind servo backwards is a negative angle.
+    // Use a sine wave to alternate the legs.
+    // When one swings forward, the other swings backward.
     int sweepAngleLeft = sin(phase) * 30; // +/- 30 degrees
-    int sweepAngleRight = -sin(phase) * 30; // opposite phase to alternate
+    int sweepAngleRight = -sin(phase) * 30; // Opposite phase
 
-    // Plant front legs
+    // Plant front legs slightly bent forward (60 degrees) to lower the front
     servoAngles[0] = 60 + pitchOffset + rollOffset;
     servoAngles[1] = 60 + pitchOffset - rollOffset;
     
-    // Sweep hind legs
+    // Apply sweeping motion to hind legs
     servoAngles[2] = 90 + sweepAngleLeft - pitchOffset + rollOffset;
     servoAngles[3] = 90 + sweepAngleRight - pitchOffset - rollOffset;
 }

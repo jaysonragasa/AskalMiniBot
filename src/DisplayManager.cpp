@@ -6,6 +6,8 @@
 #include <ArduinoJson.h>
 
 // Helper for smooth exponential interpolation
+// Calculates a percentage (speed * dt) of the distance between current and target,
+// and moves 'current' by that amount. This creates a natural, ease-out animation curve.
 static void smoothApproach(float& current, float target, float speed, float dt) {
     current += (target - current) * speed * dt;
 }
@@ -50,15 +52,19 @@ void DisplayManager::begin() {
     display.println(F("Mini Bot"));
     display.display();
     
-    // Create the FreeRTOS task pinned to Core 0
+    // -------------------------------------------------------------------------
+    // Create the FreeRTOS task pinned to Core 0.
+    // The main loop (WiFi, WebServer, Kinematics) runs on Core 1 by default.
+    // Offloading the display ensures that I2C delays don't cause jitter in servo PWM.
+    // -------------------------------------------------------------------------
     xTaskCreatePinnedToCore(
         DisplayManager::displayTask,
         "OLED_Task",
-        4096,           // Stack size
-        this,           // Parameter
-        1,              // Priority
+        4096,           // Stack size in words
+        this,           // Pass this instance as parameter
+        1,              // Priority (Low)
         &displayTaskHandle,
-        0               // Core 0 (Main runs on Core 1)
+        0               // Pin to Core 0
     );
 }
 
@@ -131,19 +137,26 @@ void DisplayManager::displayTask(void* parameter) {
 
 void DisplayManager::updateEyeLogic(float dt) {
     unsigned long now = millis();
+    
+    // Check if any joystick input is active (deadzone of 5%)
     bool hasInput = (fabs(currentInputs.throttle) > 0.05f || 
                      fabs(currentInputs.yaw) > 0.05f || 
                      fabs(currentInputs.pitch) > 0.05f || 
                      fabs(currentInputs.roll) > 0.05f);
                      
+    // -------------------------------------------------------------------------
+    // EMOTION STATE MACHINE
+    // -------------------------------------------------------------------------
     if (currentGaitIndex == 6) { // Pee
         currentEmotion = EyeEmotion::HAPPY;
     } else if (currentGaitIndex == 7) { // Scrape
         currentEmotion = EyeEmotion::ANGRY;
     } else if (hasInput) {
+        // If user is controlling the robot, eyes should lock forward (IDLE)
         lastInputTime = now;
-        currentEmotion = EyeEmotion::IDLE; // Reset to IDLE/LOOKING when moving
+        currentEmotion = EyeEmotion::IDLE; 
     } else if (now - lastInputTime > 3000) {
+        // If idle for 3 seconds, start wandering eyes procedurally
         currentEmotion = EyeEmotion::WANDERING;
     }
     
@@ -235,28 +248,34 @@ void DisplayManager::updateEyeLogic(float dt) {
 }
 
 void DisplayManager::renderEyes() {
-    // Base centers
+    // -------------------------------------------------------------------------
+    // BASE EYE RENDERING
+    // -------------------------------------------------------------------------
     int leftCenterX = 39;
     int rightCenterX = 89;
-    int centerY = 32;
+    int centerY = 32; // Vertical center of the 128x64 display
     
-    // Left eye bounds
+    // Calculate top-left bounds for drawing rounded rectangles
     int lx = leftCenterX + leftEyeCurrent.xOffset - (leftEyeCurrent.width / 2);
     int ly = centerY + leftEyeCurrent.yOffset - (leftEyeCurrent.height / 2);
     
-    // Right eye bounds
     int rx = rightCenterX + rightEyeCurrent.xOffset - (rightEyeCurrent.width / 2);
     int ry = centerY + rightEyeCurrent.yOffset - (rightEyeCurrent.height / 2);
     
+    // Draw the white bases
     display.fillRoundRect(lx, ly, leftEyeCurrent.width, leftEyeCurrent.height, leftEyeCurrent.radius, SSD1306_WHITE);
     display.fillRoundRect(rx, ry, rightEyeCurrent.width, rightEyeCurrent.height, rightEyeCurrent.radius, SSD1306_WHITE);
     
+    // -------------------------------------------------------------------------
+    // EMOTION MASKING
+    // We achieve expressions by drawing black geometry OVER the white eyes.
+    // -------------------------------------------------------------------------
     if (currentEmotion == EyeEmotion::ANGRY) {
-        // Draw black triangles to mask the top inner corners of the eyes
+        // Draw black triangles angled downward to mask the top inner corners
         display.fillTriangle(lx + leftEyeCurrent.width/2, ly - 5, lx + leftEyeCurrent.width + 5, ly - 5, lx + leftEyeCurrent.width + 5, ly + leftEyeCurrent.height/2, SSD1306_BLACK);
         display.fillTriangle(rx - 5, ly - 5, rx + rightEyeCurrent.width/2, ly - 5, rx - 5, ly + rightEyeCurrent.height/2, SSD1306_BLACK);
     } else if (currentEmotion == EyeEmotion::HAPPY) {
-        // Draw black shapes to make a bottom half-circle mask (squinting up like ^_^)
+        // Draw black rectangles over the bottom half to create a smiling squint (^_^)
         display.fillRect(lx, ly + leftEyeCurrent.height/2 + 2, leftEyeCurrent.width, leftEyeCurrent.height/2, SSD1306_BLACK);
         display.fillRect(rx, ry + rightEyeCurrent.height/2 + 2, rightEyeCurrent.width, rightEyeCurrent.height/2, SSD1306_BLACK);
     }

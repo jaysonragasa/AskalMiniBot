@@ -28,12 +28,19 @@ void RobotKinematics::onConfigUpdated() {
 void RobotKinematics::setGait(int index) {
     if (index >= 0 && index < numGaits) {
         if (currentGaitIndex != index && pendingGaitIndex != index) {
-            // Check if we are transitioning from a folded pose (Sit, Wave, Info) to a non-folded pose
+            // -------------------------------------------------------------------------
+            // FOLDED POSE TRANSITION INTERCEPT
+            // If the robot is sitting (hind legs tucked under) and is instructed to 
+            // stand up, it will physically flip backwards due to its center of mass.
+            // We intercept this here. Instead of immediately switching, we set a 
+            // `pendingGaitIndex` and trigger a `transitionProgress` state machine 
+            // inside tick() to gracefully stretch the legs first.
+            // -------------------------------------------------------------------------
             if (currentGait && currentGait->isFoldedPose() && !gaits[index]->isFoldedPose()) {
-                // Set pending state to inject a smooth "Stretch" pose via tick()
                 pendingGaitIndex = index;
-                transitionProgress = 0.01f; // Start transition
+                transitionProgress = 0.01f; // Kickstart the transition in tick()
             } else {
+                // Normal immediate switch
                 currentGait = gaits[index];
                 currentGaitIndex = index;
                 if (currentGait) {
@@ -78,17 +85,27 @@ int RobotKinematics::processAngle(int servoIndex, int targetAngle, bool applyLim
     ServoConfig cfg = config.getServoConfig(servoIndex);
     
     if (!cfg.enabled) {
-        return 90; // Just stay at center if disabled
+        return 90; // Just stay at mechanical center if disabled in WebUI
     }
     
-    // Apply offset and invert multiplier (target is relative to 90 degrees)
+    // -------------------------------------------------------------------------
+    // KINEMATIC MAPPING
+    // 1. Calculate deviation from the logical center (90 degrees).
+    // 2. Invert it if the user calibrated this specific servo as inverted.
+    // 3. Re-apply the center (90) and add the user's manual trim offset.
+    // -------------------------------------------------------------------------
     int deviation = targetAngle - 90;
     deviation *= cfg.invert; // 1 for normal, -1 for inverted
     
     int finalAngle = 90 + deviation + (int)cfg.offset;
     
+    // -------------------------------------------------------------------------
+    // SAFETY LIMITS
+    // Prevent the servos from crashing into the chassis or binding.
+    // Limits are applied dynamically (Static poses usually ignore limits to 
+    // allow extreme folding, while walking/trotting strictly obeys them).
+    // -------------------------------------------------------------------------
     if (applyLimits) {
-        // Constrain to configured maxAngle limits (relative to center 90)
         int minSafe = 90 - (int)cfg.maxAngle;
         int maxSafe = 90 + (int)cfg.maxAngle;
         
@@ -104,12 +121,18 @@ void RobotKinematics::tick() {
     float dt = (now - lastTick) / 1000.0f;
     lastTick = now;
     
-    // Handle smooth stretch transition
+    // -------------------------------------------------------------------------
+    // SMOOTH STRETCH TRANSITION STATE MACHINE
+    // If a transition was triggered in setGait(), this block executes exclusively.
+    // It interpolates the leg angles mathematically to prevent the robot from 
+    // abruptly jerking and flipping backward.
+    // -------------------------------------------------------------------------
     if (transitionProgress > 0.0f) {
-        transitionProgress += dt * 1.5f; // Completes in ~0.66 seconds
+        // Advance progress based on delta time (completes in ~0.66 seconds)
+        transitionProgress += dt * 1.5f; 
         
         if (transitionProgress >= 1.0f) {
-            // Transition finished, apply the pending gait
+            // The animation has finished. We can now safely apply the new gait.
             currentGait = gaits[pendingGaitIndex];
             currentGaitIndex = pendingGaitIndex;
             if (currentGait) currentGait->reset();
@@ -117,7 +140,7 @@ void RobotKinematics::tick() {
             transitionProgress = 0.0f;
             pendingGaitIndex = -1;
         } else {
-            // Front legs instantly stretch forward
+            // Front legs instantly stretch forward to anchor the center of mass
             int frontAngle = 30;
             
             // Hind legs slowly interpolate from folded (30) to stretched back (150)
@@ -129,7 +152,10 @@ void RobotKinematics::tick() {
             driver.write(1, processAngle(1, frontAngle, false));
             driver.write(2, processAngle(2, hindAngle, false));
             driver.write(3, processAngle(3, hindAngle, false));
-            return; // Skip normal kinematic calculations while transitioning
+            
+            // Return immediately. We don't want the normal gait calculations 
+            // overwriting our transition angles.
+            return; 
         }
     }
     

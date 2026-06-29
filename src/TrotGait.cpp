@@ -5,10 +5,13 @@
 TrotGait::TrotGait() : phase(0.0f) {}
 
 void TrotGait::calculate(float dt, const JoystickData& inputs, int servoAngles[4]) {
-    // If joystick is idle, phase resets to 0 (standing)
+    // -------------------------------------------------------------------------
+    // 1. IDLE CHECK
+    // If joystick is idle, phase resets to 0 (standing). We allow pitch/roll 
+    // to tilt the robot while standing still.
+    // -------------------------------------------------------------------------
     if (abs(inputs.throttle) < 5.0f && abs(inputs.yaw) < 5.0f) {
         phase = 0.0f;
-        // Stand still with pitch/roll applied as offsets
         int pitchOffset = inputs.pitch * 0.3f;
         int rollOffset = inputs.roll * 0.3f;
         
@@ -19,12 +22,17 @@ void TrotGait::calculate(float dt, const JoystickData& inputs, int servoAngles[4
         return;
     }
     
-    // Determine speed from throttle and yaw
+    // -------------------------------------------------------------------------
+    // 2. SPEED AND PHASE CALCULATION
+    // Calculate speed magnitude and advance the phase.
+    // Trot is a medium speed gait (multiplier 10.0f).
+    // -------------------------------------------------------------------------
     float speed = sqrt(inputs.throttle * inputs.throttle + inputs.yaw * inputs.yaw) / 100.0f;
     if (speed > 1.0f) speed = 1.0f;
     
-    // Advance phase
     float phaseSpeed = 10.0f * speed; 
+    
+    // Reverse animation direction for backward movement
     if (inputs.throttle < 0) {
         phase -= phaseSpeed * dt;
     } else {
@@ -34,22 +42,33 @@ void TrotGait::calculate(float dt, const JoystickData& inputs, int servoAngles[4
     if (phase > 2 * M_PI) phase -= 2 * M_PI;
     if (phase < 0) phase += 2 * M_PI;
     
-    // Calculate amplitudes based on yaw for steering (differential drive logic)
+    // -------------------------------------------------------------------------
+    // 3. LEG SWING AMPLITUDES (STEERING)
+    // Calculate amplitudes based on yaw for steering (differential drive logic).
+    // maxAmp limits the maximum leg swing to 40 degrees.
+    // -------------------------------------------------------------------------
     float leftAmp = inputs.throttle + inputs.yaw;
     float rightAmp = inputs.throttle - inputs.yaw;
     
-    // Normalize
-    float maxAmp = 40.0f; // Max angle deviation from 90
+    float maxAmp = 40.0f; 
     leftAmp = (leftAmp / 100.0f) * maxAmp;
     rightAmp = (rightAmp / 100.0f) * maxAmp;
     
-    // Trot: Diagonal pairs move together. 0 & 3, 1 & 2.
-    // 0 = Front Left, 1 = Front Right, 2 = Back Left, 3 = Back Right
+    // -------------------------------------------------------------------------
+    // 4. TROT LOGIC
+    // In a trot, diagonal pairs of legs move exactly together.
+    // Pair 1: Front Left (0) & Back Right (3)
+    // Pair 2: Front Right (1) & Back Left (2)
+    // Pair 2 is exactly 180 degrees (PI) out of phase with Pair 1.
+    // -------------------------------------------------------------------------
     float pair1 = sin(phase);
-    float pair2 = sin(phase + M_PI); // 180 degrees out of phase
+    float pair2 = sin(phase + M_PI);
     
-    servoAngles[0] = 90 + pair1 * leftAmp;
-    servoAngles[1] = 90 + pair2 * rightAmp;
-    servoAngles[2] = 90 + pair2 * leftAmp;
-    servoAngles[3] = 90 + pair1 * rightAmp;
+    // -------------------------------------------------------------------------
+    // 5. FINAL ANGLE CALCULATION
+    // -------------------------------------------------------------------------
+    servoAngles[0] = 90 + pair1 * leftAmp;  // Front Left
+    servoAngles[1] = 90 + pair2 * rightAmp; // Front Right
+    servoAngles[2] = 90 + pair2 * leftAmp;  // Back Left
+    servoAngles[3] = 90 + pair1 * rightAmp; // Back Right
 }

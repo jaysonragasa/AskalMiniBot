@@ -50,20 +50,25 @@ void setup() {
     delay(2000); 
     Serial.println("\nAskalMiniBot Starting...");
 
-    // Initialize display early to show status
+    // -------------------------------------------------------------------------
+    // 1. HARDWARE INITIALIZATION
+    // -------------------------------------------------------------------------
+    // Initialize display early to show boot status
 #ifdef ENABLE_OLED_DISPLAY
     displayMgr.begin();
 #endif
 
-    // Load config (offsets, pins)
+    // Load saved servo calibration and API keys from non-volatile storage
     configRepo.begin();
 
-    // Initialize kinematics (which attaches servos)
+    // Initialize kinematics (which attaches and homes servos)
     robot.begin();
 
-    // Connect to Wi-Fi
+    // -------------------------------------------------------------------------
+    // 2. NETWORK INITIALIZATION
+    // -------------------------------------------------------------------------
     Serial.printf("Connecting to %s\n", WIFI_SSID);
-    WiFi.mode(WIFI_STA);
+    WiFi.mode(WIFI_STA); // Station mode (connects to your router)
     WiFi.begin(WIFI_SSID, WIFI_PASS);
 
     while (WiFi.status() != WL_CONNECTED) {
@@ -103,28 +108,40 @@ void setup() {
 void loop() {
     unsigned long loopStart = millis();
 
-    // Update WebSockets
+    // -------------------------------------------------------------------------
+    // 1. HANDLE EXTERNAL EVENTS
+    // -------------------------------------------------------------------------
+    // Process incoming WebSocket messages (joystick inputs, config changes)
     webUI.loop();
 
-    // Handle OTA
+    // Handle Over-The-Air (OTA) firmware updates
     ArduinoOTA.handle();
 
-    // Update Kinematics/Servos
+    // -------------------------------------------------------------------------
+    // 2. CORE ROBOTICS LOGIC
+    // -------------------------------------------------------------------------
+    // Calculate new servo angles and execute transitions
     robot.tick();
 
-    // Feed latest data to DisplayManager (it runs on Core 0 automatically)
+    // -------------------------------------------------------------------------
+    // 3. UI AND LOGGING
+    // -------------------------------------------------------------------------
+    // Feed latest data to DisplayManager (it actually renders on Core 0 automatically)
 #ifdef ENABLE_OLED_DISPLAY
     displayMgr.updateData(WiFi.localIP().toString(), currentLoopTime, robot.getLatestInputs(), robot.getGaitIndex());
 #endif
     
-    // Serial Log (every 1000ms)
+    // Serial Log (every 1000ms) for debugging
     unsigned long now = millis();
     if (now - lastSerialLog > 1000) {
         lastSerialLog = now;
         Serial.printf("[System] Loop Time: %u ms\n", currentLoopTime);
     }
 
-    // Enforce fixed loop rate if necessary, or just measure it
+    // -------------------------------------------------------------------------
+    // 4. TIMING ENFORCEMENT
+    // Maintain a consistent execution rate (e.g. 20ms / 50Hz)
+    // -------------------------------------------------------------------------
     currentLoopTime = millis() - loopStart;
     int sleepTime = (int)LOOP_DELAY_MS - (int)currentLoopTime;
     if (sleepTime > 0) {
