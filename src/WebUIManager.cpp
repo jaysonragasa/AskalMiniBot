@@ -297,6 +297,10 @@ const char index_html[] PROGMEM = R"rawliteral(
 WebUIManager::WebUIManager(IInputReceiver& inputReceiver, IConfigRepository& configRepository)
     : server(80), ws("/ws"), input(inputReceiver), config(configRepository) {}
 
+// -------------------------------------------------------------------------
+// WebUIManager::begin
+// Initializes the AsyncWebServer, configures WebSocket handlers, and serves the UI.
+// -------------------------------------------------------------------------
 void WebUIManager::begin() {
     // -------------------------------------------------------------------------
     // Set up WebSocket event handler
@@ -322,11 +326,19 @@ void WebUIManager::begin() {
     server.begin();
 }
 
+// -------------------------------------------------------------------------
+// WebUIManager::loop
+// Must be called in the main loop to clean up disconnected WebSocket clients.
+// -------------------------------------------------------------------------
 void WebUIManager::loop() {
     // Disconnect dead clients and free memory. Needs to run frequently.
     ws.cleanupClients();
 }
 
+// -------------------------------------------------------------------------
+// WebUIManager::handleWebSocketMessage
+// Parses incoming JSON from the browser and routes it to the correct handler.
+// -------------------------------------------------------------------------
 void WebUIManager::handleWebSocketMessage(void *arg, uint8_t *data, size_t len, AsyncWebSocketClient *client) {
     AwsFrameInfo *info = (AwsFrameInfo*)arg;
     

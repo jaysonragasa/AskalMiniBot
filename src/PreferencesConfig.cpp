@@ -1,9 +1,16 @@
 #include "PreferencesConfig.h"
 #include "config.h"
 
+// -------------------------------------------------------------------------
+// PreferencesConfig Constructor
+// -------------------------------------------------------------------------
 PreferencesConfig::PreferencesConfig() {
 }
 
+// -------------------------------------------------------------------------
+// PreferencesConfig::begin
+// Initializes the NVS memory and loads saved config.
+// -------------------------------------------------------------------------
 void PreferencesConfig::begin() {
     // Open the "minibot" namespace in Read/Write mode
     preferences.begin("minibot", false);
@@ -33,6 +40,10 @@ void PreferencesConfig::begin() {
     }
 }
 
+// -------------------------------------------------------------------------
+// PreferencesConfig::loadDefaults
+// Populates RAM cache with hardcoded default values.
+// -------------------------------------------------------------------------
 void PreferencesConfig::loadDefaults() {
     for (int i = 0; i < 4; i++) {
         servoConfigs[i] = DEFAULT_SERVO_CONFIGS[i];
@@ -43,6 +54,10 @@ void PreferencesConfig::loadDefaults() {
     }
 }
 
+// -------------------------------------------------------------------------
+// PreferencesConfig::getServoConfig
+// Retrieves a specific servo's configuration from RAM.
+// -------------------------------------------------------------------------
 ServoConfig PreferencesConfig::getServoConfig(int index) {
     if (index >= 0 && index < 4) {
         return servoConfigs[index];
@@ -50,6 +65,10 @@ ServoConfig PreferencesConfig::getServoConfig(int index) {
     return DEFAULT_SERVO_CONFIGS[0];
 }
 
+// -------------------------------------------------------------------------
+// PreferencesConfig::setServoConfig
+// Saves a specific servo's configuration to RAM and NVS.
+// -------------------------------------------------------------------------
 void PreferencesConfig::setServoConfig(int index, const ServoConfig& config) {
     if (index >= 0 && index < 4) {
         servoConfigs[index] = config;
@@ -66,10 +85,18 @@ void PreferencesConfig::setServoConfig(int index, const ServoConfig& config) {
     }
 }
 
+// -------------------------------------------------------------------------
+// PreferencesConfig::getOpenWeatherKey
+// Retrieves the saved OpenWeatherMap API key from NVS.
+// -------------------------------------------------------------------------
 String PreferencesConfig::getOpenWeatherKey() {
     return preferences.getString("ow_key", "");
 }
 
+// -------------------------------------------------------------------------
+// PreferencesConfig::setOpenWeatherKey
+// Saves the OpenWeatherMap API key to NVS.
+// -------------------------------------------------------------------------
 void PreferencesConfig::setOpenWeatherKey(const String& key) {
     preferences.putString("ow_key", key);
 }

@@ -1,6 +1,10 @@
 #include "RobotKinematics.h"
 #include <Arduino.h>
 
+// -------------------------------------------------------------------------
+// RobotKinematics Constructor
+// Sets up initial state and default gait.
+// -------------------------------------------------------------------------
 RobotKinematics::RobotKinematics(IServoDriver& servoDriver, IConfigRepository& configRepo, IGaitStrategy** gaitsArray, int count)
     : driver(servoDriver), config(configRepo), gaits(gaitsArray), numGaits(count) {
     currentGait = (count > 0) ? gaits[0] : nullptr;
@@ -15,16 +19,28 @@ RobotKinematics::RobotKinematics(IServoDriver& servoDriver, IConfigRepository& c
     }
 }
 
+// -------------------------------------------------------------------------
+// RobotKinematics::begin
+// Initializes driver and reattaches servos.
+// -------------------------------------------------------------------------
 void RobotKinematics::begin() {
     driver.begin();
     reattachServos();
     lastTick = millis();
 }
 
+// -------------------------------------------------------------------------
+// RobotKinematics::onConfigUpdated
+// Callback when configuration changes. Re-homes the servos.
+// -------------------------------------------------------------------------
 void RobotKinematics::onConfigUpdated() {
     reattachServos();
 }
 
+// -------------------------------------------------------------------------
+// RobotKinematics::setGait
+// Requests a change in the active pose/gait, initiating transitions if needed.
+// -------------------------------------------------------------------------
 void RobotKinematics::setGait(int index) {
     if (index >= 0 && index < numGaits) {
         if (currentGaitIndex != index && pendingGaitIndex != index) {
@@ -53,11 +69,19 @@ void RobotKinematics::setGait(int index) {
     }
 }
 
+// -------------------------------------------------------------------------
+// RobotKinematics::getGaitIndex
+// Returns the currently active or pending gait index.
+// -------------------------------------------------------------------------
 int RobotKinematics::getGaitIndex() const {
     if (transitionProgress > 0.0f) return pendingGaitIndex;
     return currentGaitIndex;
 }
 
+// -------------------------------------------------------------------------
+// RobotKinematics::reattachServos
+// Reloads config, attaches servos, and moves to a safe 90 degree home.
+// -------------------------------------------------------------------------
 void RobotKinematics::reattachServos() {
     for (int i = 0; i < 4; i++) {
         if (driver.isAttached(i)) {
@@ -74,6 +98,10 @@ void RobotKinematics::reattachServos() {
     }
 }
 
+// -------------------------------------------------------------------------
+// RobotKinematics::onJoystickUpdate
+// Callback from WebUI when virtual joystick is moved.
+// -------------------------------------------------------------------------
 void RobotKinematics::onJoystickUpdate(float throttle, float yaw, float pitch, float roll) {
     latestInputs.throttle = throttle;
     latestInputs.yaw = yaw;
@@ -81,6 +109,10 @@ void RobotKinematics::onJoystickUpdate(float throttle, float yaw, float pitch, f
     latestInputs.roll = roll;
 }
 
+// -------------------------------------------------------------------------
+// RobotKinematics::processAngle
+// Applies logical configurations (trim, inversion, limits) to a target angle.
+// -------------------------------------------------------------------------
 int RobotKinematics::processAngle(int servoIndex, int targetAngle, bool applyLimits) {
     ServoConfig cfg = config.getServoConfig(servoIndex);
     
@@ -116,6 +148,10 @@ int RobotKinematics::processAngle(int servoIndex, int targetAngle, bool applyLim
     return finalAngle;
 }
 
+// -------------------------------------------------------------------------
+// RobotKinematics::tick
+// Main engine function. Should be called continuously in the main loop.
+// -------------------------------------------------------------------------
 void RobotKinematics::tick() {
     unsigned long now = millis();
     float dt = (now - lastTick) / 1000.0f;

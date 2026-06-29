@@ -2,8 +2,16 @@
 #include <math.h>
 #include <stdlib.h>
 
+// -------------------------------------------------------------------------
+// WalkGait Constructor
+// Initializes the animation phase to 0.
+// -------------------------------------------------------------------------
 WalkGait::WalkGait() : phase(0.0f) {}
 
+// -------------------------------------------------------------------------
+// WalkGait::calculate
+// Computes servo angles for a 4-beat walking motion.
+// -------------------------------------------------------------------------
 void WalkGait::calculate(float dt, const JoystickData& inputs, int servoAngles[4]) {
     // -------------------------------------------------------------------------
     // 1. IDLE CHECK

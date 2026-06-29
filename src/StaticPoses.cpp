@@ -1,5 +1,9 @@
 #include "StaticPoses.h"
 #include <math.h>
+// -------------------------------------------------------------------------
+// SitPose::calculate
+// Computes the servo angles for sitting.
+// -------------------------------------------------------------------------
 void SitPose::calculate(float dt, const JoystickData& inputs, int servoAngles[4]) {
     // -------------------------------------------------------------------------
     // The SitPose folds the hind legs completely underneath the robot (angle 30)
@@ -18,6 +22,10 @@ void SitPose::calculate(float dt, const JoystickData& inputs, int servoAngles[4]
     servoAngles[3] = 30 - pitchOffset - rollOffset;  // Hind Right (Folded)
 }
 
+// -------------------------------------------------------------------------
+// StretchPose::calculate
+// Computes the servo angles for a stretched-out posture.
+// -------------------------------------------------------------------------
 void StretchPose::calculate(float dt, const JoystickData& inputs, int servoAngles[4]) {
     // -------------------------------------------------------------------------
     // The StretchPose extends all legs outward. Front legs point forward (30),
@@ -32,12 +40,23 @@ void StretchPose::calculate(float dt, const JoystickData& inputs, int servoAngle
     servoAngles[3] = 150 - pitchOffset - rollOffset; // Hind Right (Backward)
 }
 
+// -------------------------------------------------------------------------
+// WavePose Constructor
+// -------------------------------------------------------------------------
 WavePose::WavePose() : phase(0.0f) {}
 
+// -------------------------------------------------------------------------
+// WavePose::reset
+// Resets the wave animation to the beginning.
+// -------------------------------------------------------------------------
 void WavePose::reset() {
     phase = 0.0f;
 }
 
+// -------------------------------------------------------------------------
+// WavePose::calculate
+// Computes the servo angles for sitting and waving a paw.
+// -------------------------------------------------------------------------
 void WavePose::calculate(float dt, const JoystickData& inputs, int servoAngles[4]) {
     // -------------------------------------------------------------------------
     // The WavePose makes the robot sit, lift its front-right leg, and oscillate it
@@ -59,12 +78,23 @@ void WavePose::calculate(float dt, const JoystickData& inputs, int servoAngles[4
     servoAngles[3] = 30 - pitchOffset - rollOffset;                 // Hind Right: Folded (sitting)
 }
 
+// -------------------------------------------------------------------------
+// PeePose Constructor
+// -------------------------------------------------------------------------
 PeePose::PeePose() : elapsedTime(0.0f) {}
 
+// -------------------------------------------------------------------------
+// PeePose::reset
+// Resets the timer for the pee animation.
+// -------------------------------------------------------------------------
 void PeePose::reset() {
     elapsedTime = 0.0f;
 }
 
+// -------------------------------------------------------------------------
+// PeePose::calculate
+// Computes the servo angles for lifting and wagging a hind leg.
+// -------------------------------------------------------------------------
 void PeePose::calculate(float dt, const JoystickData& inputs, int servoAngles[4]) {
     // -------------------------------------------------------------------------
     // The PeePose simulates a dog lifting its hind leg. The animation runs for 
@@ -95,8 +125,15 @@ void PeePose::calculate(float dt, const JoystickData& inputs, int servoAngles[4]
     }
 }
 
+// -------------------------------------------------------------------------
+// ScrapePose Constructor
+// -------------------------------------------------------------------------
 ScrapePose::ScrapePose() : phase(0.0f) {}
 
+// -------------------------------------------------------------------------
+// ScrapePose::calculate
+// Computes the servo angles for a bull-like scrape animation.
+// -------------------------------------------------------------------------
 void ScrapePose::calculate(float dt, const JoystickData& inputs, int servoAngles[4]) {
     // -------------------------------------------------------------------------
     // The ScrapePose simulates an angry bull scraping the ground.
@@ -122,6 +159,10 @@ void ScrapePose::calculate(float dt, const JoystickData& inputs, int servoAngles
     servoAngles[3] = 90 + sweepAngleRight - pitchOffset - rollOffset;
 }
 
+// -------------------------------------------------------------------------
+// InfoPose::calculate
+// Computes the servo angles for sitting while looking up.
+// -------------------------------------------------------------------------
 void InfoPose::calculate(float dt, const JoystickData& inputs, int servoAngles[4]) {
     // Just sit quietly while showing weather
     int pitchOffset = inputs.pitch * 0.2f;

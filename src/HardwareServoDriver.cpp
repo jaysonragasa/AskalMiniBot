@@ -1,7 +1,14 @@
 #include "HardwareServoDriver.h"
 
+// -------------------------------------------------------------------------
+// HardwareServoDriver Constructor
+// -------------------------------------------------------------------------
 HardwareServoDriver::HardwareServoDriver() {}
 
+// -------------------------------------------------------------------------
+// HardwareServoDriver::begin
+// Allocates PWM timers needed for servo control.
+// -------------------------------------------------------------------------
 void HardwareServoDriver::begin() {
     // -------------------------------------------------------------------------
     // ESP32 requires explicit PWM timer allocation for servos.
@@ -13,6 +20,10 @@ void HardwareServoDriver::begin() {
     ESP32PWM::allocateTimer(3);
 }
 
+// -------------------------------------------------------------------------
+// HardwareServoDriver::attach
+// Attaches a servo to a specific GPIO pin.
+// -------------------------------------------------------------------------
 void HardwareServoDriver::attach(int index, int pin) {
     if (index >= 0 && index < 4) {
         // Standard analog servos operate at 50Hz (20ms period).
@@ -22,12 +33,20 @@ void HardwareServoDriver::attach(int index, int pin) {
     }
 }
 
+// -------------------------------------------------------------------------
+// HardwareServoDriver::detach
+// Detaches a servo from its GPIO pin.
+// -------------------------------------------------------------------------
 void HardwareServoDriver::detach(int index) {
     if (index >= 0 && index < 4 && servos[index].attached()) {
         servos[index].detach();
     }
 }
 
+// -------------------------------------------------------------------------
+// HardwareServoDriver::isAttached
+// Checks if a servo is currently attached.
+// -------------------------------------------------------------------------
 bool HardwareServoDriver::isAttached(int index) {
     if (index >= 0 && index < 4) {
         return servos[index].attached();
@@ -35,6 +54,10 @@ bool HardwareServoDriver::isAttached(int index) {
     return false;
 }
 
+// -------------------------------------------------------------------------
+// HardwareServoDriver::write
+// Commands a servo to a specific angle.
+// -------------------------------------------------------------------------
 void HardwareServoDriver::write(int index, int angle) {
     if (index >= 0 && index < 4) {
         servos[index].write(angle);

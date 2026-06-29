@@ -2,8 +2,16 @@
 #include <math.h>
 #include <stdlib.h>
 
+// -------------------------------------------------------------------------
+// GallopGait Constructor
+// Initializes the animation phase to 0.
+// -------------------------------------------------------------------------
 GallopGait::GallopGait() : phase(0.0f) {}
 
+// -------------------------------------------------------------------------
+// GallopGait::calculate
+// Computes servo angles for a galloping motion based on joystick inputs.
+// -------------------------------------------------------------------------
 void GallopGait::calculate(float dt, const JoystickData& inputs, int servoAngles[4]) {
     // -------------------------------------------------------------------------
     // 1. IDLE CHECK

@@ -12,6 +12,9 @@ static void smoothApproach(float& current, float target, float speed, float dt) 
     current += (target - current) * speed * dt;
 }
 
+// -------------------------------------------------------------------------
+// DisplayManager Constructor
+// -------------------------------------------------------------------------
 DisplayManager::DisplayManager(IConfigRepository& configRepo) : display(OLED_WIDTH, OLED_HEIGHT, &Wire, -1), isInitialized(false), bootTime(0), config(configRepo), displayTaskHandle(NULL) {
     currentInputs = {0,0,0,0};
     currentIpAddress = "";
@@ -29,6 +32,10 @@ DisplayManager::DisplayManager(IConfigRepository& configRepo) : display(OLED_WID
     rightEyeCurrent = defaultEye;
 }
 
+// -------------------------------------------------------------------------
+// DisplayManager::begin
+// Initializes the OLED and starts the FreeRTOS display task.
+// -------------------------------------------------------------------------
 void DisplayManager::begin() {
     Wire.begin(OLED_SDA, OLED_SCL);
     Wire.setClock(400000); // 400kHz for fast OLED updates
@@ -68,6 +75,10 @@ void DisplayManager::begin() {
     );
 }
 
+// -------------------------------------------------------------------------
+// DisplayManager::updateData
+// Updates shared state variables from the main core.
+// -------------------------------------------------------------------------
 void DisplayManager::updateData(const String& ipAddress, uint32_t loopTimeMs, const JoystickData& inputs, int gaitIndex) {
     currentIpAddress = ipAddress;
     currentLoopTimeMs = loopTimeMs;
@@ -75,6 +86,10 @@ void DisplayManager::updateData(const String& ipAddress, uint32_t loopTimeMs, co
     currentGaitIndex = gaitIndex;
 }
 
+// -------------------------------------------------------------------------
+// DisplayManager::displayTask
+// The FreeRTOS task function running on Core 0.
+// -------------------------------------------------------------------------
 void DisplayManager::displayTask(void* parameter) {
     DisplayManager* self = static_cast<DisplayManager*>(parameter);
     
@@ -135,6 +150,10 @@ void DisplayManager::displayTask(void* parameter) {
     }
 }
 
+// -------------------------------------------------------------------------
+// DisplayManager::updateEyeLogic
+// Updates procedural animation targets for the eyes based on inputs.
+// -------------------------------------------------------------------------
 void DisplayManager::updateEyeLogic(float dt) {
     unsigned long now = millis();
     
@@ -247,6 +266,10 @@ void DisplayManager::updateEyeLogic(float dt) {
     smoothApproach(rightEyeCurrent.height, rightEyeTarget.height, speed, dt);
 }
 
+// -------------------------------------------------------------------------
+// DisplayManager::renderEyes
+// Draws the current eye state to the OLED display buffer.
+// -------------------------------------------------------------------------
 void DisplayManager::renderEyes() {
     // -------------------------------------------------------------------------
     // BASE EYE RENDERING
@@ -281,6 +304,10 @@ void DisplayManager::renderEyes() {
     }
 }
 
+// -------------------------------------------------------------------------
+// DisplayManager::fetchWeather
+// Performs HTTP GET to OpenWeatherMap and parses JSON.
+// -------------------------------------------------------------------------
 void DisplayManager::fetchWeather() {
     String apiKey = config.getOpenWeatherKey();
     if (apiKey.length() == 0) {
@@ -322,6 +349,10 @@ void DisplayManager::fetchWeather() {
     http.end();
 }
 
+// -------------------------------------------------------------------------
+// DisplayManager::drawSun
+// Draws an animated sun icon.
+// -------------------------------------------------------------------------
 void DisplayManager::drawSun(int cx, int cy, float t) {
     // Draw center circle
     display.fillCircle(cx, cy, 8, SSD1306_WHITE);
@@ -336,6 +367,10 @@ void DisplayManager::drawSun(int cx, int cy, float t) {
     }
 }
 
+// -------------------------------------------------------------------------
+// DisplayManager::drawCloud
+// Draws an animated cloud icon.
+// -------------------------------------------------------------------------
 void DisplayManager::drawCloud(int cx, int cy, float t) {
     // Bobbing motion
     int bob = sin(t * 2.0f) * 2;
@@ -349,6 +384,10 @@ void DisplayManager::drawCloud(int cx, int cy, float t) {
     display.fillRect(cx - 8, cy + 3, 16, 6, SSD1306_WHITE);
 }
 
+// -------------------------------------------------------------------------
+// DisplayManager::drawRain
+// Draws an animated rain icon.
+// -------------------------------------------------------------------------
 void DisplayManager::drawRain(int cx, int cy, float t) {
     drawCloud(cx, cy, t);
     
@@ -365,6 +404,10 @@ void DisplayManager::drawRain(int cx, int cy, float t) {
     }
 }
 
+// -------------------------------------------------------------------------
+// DisplayManager::renderWeather
+// Draws the weather info (temp, conditions) and appropriate icon.
+// -------------------------------------------------------------------------
 void DisplayManager::renderWeather() {
     // Location Name at the top left
     display.setTextSize(1);

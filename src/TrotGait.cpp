@@ -2,8 +2,16 @@
 #include <math.h>
 #include <stdlib.h>
 
+// -------------------------------------------------------------------------
+// TrotGait Constructor
+// Initializes the animation phase to 0.
+// -------------------------------------------------------------------------
 TrotGait::TrotGait() : phase(0.0f) {}
 
+// -------------------------------------------------------------------------
+// TrotGait::calculate
+// Computes servo angles for a diagonal trotting motion.
+// -------------------------------------------------------------------------
 void TrotGait::calculate(float dt, const JoystickData& inputs, int servoAngles[4]) {
     // -------------------------------------------------------------------------
     // 1. IDLE CHECK
