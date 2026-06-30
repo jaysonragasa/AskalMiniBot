@@ -81,8 +81,8 @@ void GallopGait::calculate(float dt, const JoystickData& inputs, int servoAngles
     // We multiply the base leg swing (-1.0 to 1.0) by the side amplitude (leftAmp/rightAmp)
     // to get the final servo angle deviation from 90 (center).
     // -------------------------------------------------------------------------
-    servoAngles[0] = (90 + 20) + front * leftAmp;
-    servoAngles[1] = (90 + 20) + front * rightAmp;
+    servoAngles[0] = (90 - 20) + front * leftAmp;
+    servoAngles[1] = (90 - 20) + front * rightAmp;
     servoAngles[2] = 90 + hind * leftAmp;
     servoAngles[3] = 90 + hind * rightAmp;
 }
