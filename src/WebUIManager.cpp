@@ -355,12 +355,13 @@ void WebUIManager::handleWebSocketMessage(void *arg, uint8_t *data, size_t len, 
     
     // Check that we received a complete text frame
     if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
-        // Null-terminate the raw data so ArduinoJson can parse it safely
-        data[len] = 0;
-        
+        // Safely deserialize without modifying the original buffer
         JsonDocument doc;
-        DeserializationError error = deserializeJson(doc, (char*)data);
-        if (error) return; // Ignore malformed JSON
+        DeserializationError error = deserializeJson(doc, data, len);
+        if (error) {
+            Serial.printf("JSON parse failed: %s\n", error.c_str());
+            return; // Ignore malformed JSON
+        }
 
         const char* type = doc["type"];
         
