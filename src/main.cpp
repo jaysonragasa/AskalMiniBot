@@ -9,6 +9,7 @@
 #include "TrotGait.h"
 #include "WalkGait.h"
 #include "GallopGait.h"
+#include "AutoGait.h"
 #include "StaticPoses.h"
 #include "RobotKinematics.h"
 #include "WebUIManager.h"
@@ -22,6 +23,7 @@ HardwareServoDriver servoDriver;
 TrotGait trotGait;
 WalkGait walkGait;
 GallopGait gallopGait;
+AutoGait autoGait;
 SitPose sitPose;
 StretchPose stretchPose;
 WavePose wavePose;
@@ -29,7 +31,7 @@ PeePose peePose;
 ScrapePose scrapePose;
 InfoPose infoPose;
 
-IGaitStrategy* allGaits[] = { &trotGait, &walkGait, &gallopGait, &sitPose, &stretchPose, &wavePose, &peePose, &scrapePose, &infoPose };
+IGaitStrategy* allGaits[] = { &trotGait, &walkGait, &gallopGait, &autoGait, &sitPose, &stretchPose, &wavePose, &peePose, &scrapePose, &infoPose };
 int numGaits = sizeof(allGaits) / sizeof(allGaits[0]);
 
 // High-level components injected with dependencies

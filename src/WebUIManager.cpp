@@ -79,16 +79,17 @@ const char index_html[] PROGMEM = R"rawliteral(
         <button class="mode-btn active" onclick="setMode(0, this)">Trot</button>
         <button class="mode-btn" onclick="setMode(1, this)">Walk</button>
         <button class="mode-btn" onclick="setMode(2, this)">Gallop</button>
+        <button class="mode-btn" onclick="setMode(3, this)">Auto</button>
       </div>
       <div class="mode-row" style="margin-top: 15px;">
-        <button class="mode-btn" onclick="setMode(3, this)">Sit</button>
-        <button class="mode-btn" onclick="setMode(4, this)">Stretch</button>
-        <button class="mode-btn" onclick="setMode(5, this)">Wave</button>
+        <button class="mode-btn" onclick="setMode(4, this)">Sit</button>
+        <button class="mode-btn" onclick="setMode(5, this)">Stretch</button>
+        <button class="mode-btn" onclick="setMode(6, this)">Wave</button>
       </div>
       <div class="mode-row" style="margin-top: 15px;">
-        <button class="mode-btn" onclick="setMode(6, this)">Pee</button>
-        <button class="mode-btn" onclick="setMode(7, this)">Scrape</button>
-        <button class="mode-btn" onclick="setMode(8, this)">Info</button>
+        <button class="mode-btn" onclick="setMode(7, this)">Pee</button>
+        <button class="mode-btn" onclick="setMode(8, this)">Scrape</button>
+        <button class="mode-btn" onclick="setMode(9, this)">Info</button>
       </div>
     </div>
   </div>
