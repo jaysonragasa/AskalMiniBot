@@ -24,9 +24,9 @@ void GallopGait::calculate(float dt, const JoystickData& inputs, int servoAngles
         int pitchOffset = inputs.pitch * 0.3f;
         int rollOffset = inputs.roll * 0.3f;
         
-        // Base standing angle is 90. Apply tilt offsets.
-        servoAngles[0] = 90 + pitchOffset + rollOffset;
-        servoAngles[1] = 90 + pitchOffset - rollOffset;
+        // Base standing angle includes the +20 front offset.
+        servoAngles[0] = 110 + pitchOffset + rollOffset;
+        servoAngles[1] = 110 + pitchOffset - rollOffset;
         servoAngles[2] = 90 - pitchOffset + rollOffset;
         servoAngles[3] = 90 - pitchOffset - rollOffset;
         return;
@@ -81,8 +81,8 @@ void GallopGait::calculate(float dt, const JoystickData& inputs, int servoAngles
     // We multiply the base leg swing (-1.0 to 1.0) by the side amplitude (leftAmp/rightAmp)
     // to get the final servo angle deviation from 90 (center).
     // -------------------------------------------------------------------------
-    servoAngles[0] = 90 + front * leftAmp;
-    servoAngles[1] = 90 + front * rightAmp;
+    servoAngles[0] = (90 + 20) + front * leftAmp;
+    servoAngles[1] = (90 + 20) + front * rightAmp;
     servoAngles[2] = 90 + hind * leftAmp;
     servoAngles[3] = 90 + hind * rightAmp;
 }

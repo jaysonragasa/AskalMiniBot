@@ -23,8 +23,9 @@ void TrotGait::calculate(float dt, const JoystickData& inputs, int servoAngles[4
         int pitchOffset = inputs.pitch * 0.3f;
         int rollOffset = inputs.roll * 0.3f;
         
-        servoAngles[0] = 90 + pitchOffset + rollOffset;
-        servoAngles[1] = 90 + pitchOffset - rollOffset;
+        // Base standing angle for Trot includes the +20 front offset.
+        servoAngles[0] = 110 + pitchOffset + rollOffset;
+        servoAngles[1] = 110 + pitchOffset - rollOffset;
         servoAngles[2] = 90 - pitchOffset + rollOffset;
         servoAngles[3] = 90 - pitchOffset - rollOffset;
         return;
@@ -75,8 +76,8 @@ void TrotGait::calculate(float dt, const JoystickData& inputs, int servoAngles[4
     // -------------------------------------------------------------------------
     // 5. FINAL ANGLE CALCULATION
     // -------------------------------------------------------------------------
-    servoAngles[0] = 90 + pair1 * leftAmp;  // Front Left
-    servoAngles[1] = 90 + pair2 * rightAmp; // Front Right
+    servoAngles[0] = (90 + 20) + pair1 * leftAmp;  // Front Left
+    servoAngles[1] = (90 + 20) + pair2 * rightAmp; // Front Right
     servoAngles[2] = 90 + pair2 * leftAmp;  // Back Left
     servoAngles[3] = 90 + pair1 * rightAmp; // Back Right
 }
