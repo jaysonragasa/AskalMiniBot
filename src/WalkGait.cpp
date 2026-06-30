@@ -1,3 +1,8 @@
+/**
+ * @file WalkGait.cpp
+ * @brief Walk gait implementation: stable 4-beat motion with legs offset by PI/2.
+ */
+
 #include "WalkGait.h"
 #include <math.h>
 #include <stdlib.h>
@@ -22,8 +27,8 @@ void WalkGait::calculate(float dt, const JoystickData& inputs, int servoAngles[4
         phase = 0.0f;
         int pitchOffset = inputs.pitch * 0.3f;
         int rollOffset = inputs.roll * 0.3f;
-        servoAngles[0] = 90 + pitchOffset + rollOffset;
-        servoAngles[1] = 90 + pitchOffset - rollOffset;
+        servoAngles[0] = 110 + pitchOffset + rollOffset;
+        servoAngles[1] = 110 + pitchOffset - rollOffset;
         servoAngles[2] = 90 - pitchOffset + rollOffset;
         servoAngles[3] = 90 - pitchOffset - rollOffset;
         return;
@@ -77,8 +82,8 @@ void WalkGait::calculate(float dt, const JoystickData& inputs, int servoAngles[4
     // 5. FINAL ANGLE CALCULATION
     // Apply the swings to the base 90 degree angle.
     // -------------------------------------------------------------------------
-    servoAngles[0] = 90 + lf * leftAmp;
-    servoAngles[1] = 90 + rf * rightAmp;
+    servoAngles[0] = (90 + 20) + lf * leftAmp;
+    servoAngles[1] = (90 + 20) + rf * rightAmp;
     servoAngles[2] = 90 + hl * leftAmp;
     servoAngles[3] = 90 + hr * rightAmp;
 }
