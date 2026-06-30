@@ -65,9 +65,9 @@ void PreferencesConfig::loadDefaults() {
 
 // -------------------------------------------------------------------------
 // PreferencesConfig::getServoConfig
-// Retrieves a specific servo's configuration from RAM.
+// Retrieves a specific servo's configuration from the RAM cache (by reference).
 // -------------------------------------------------------------------------
-ServoConfig PreferencesConfig::getServoConfig(int index) {
+const ServoConfig& PreferencesConfig::getServoConfig(int index) {
     if (index >= 0 && index < 4) {
         return servoConfigs[index];
     }

@@ -71,6 +71,8 @@ unsigned long lastOledUpdate = 0; ///< Reserved: timestamp of last OLED refresh.
 unsigned long lastLoopTick = 0;   ///< Reserved: timestamp of last loop tick.
 unsigned long lastSerialLog = 0;  ///< Timestamp of the last 1Hz serial status log.
 uint32_t currentLoopTime = 0;     ///< Measured execution time of the last loop iteration (ms).
+String cachedIpStr;               ///< Cached IP string; only rebuilt when the address changes.
+IPAddress cachedIp;               ///< Last IP we formatted, to detect changes cheaply.
 
 // -------------------------------------------------------------------------
 // setup
@@ -166,7 +168,14 @@ void loop() {
     // -------------------------------------------------------------------------
     // Feed latest data to DisplayManager (it actually renders on Core 0 automatically)
 #ifdef ENABLE_OLED_DISPLAY
-    displayMgr.updateData(WiFi.localIP().toString(), currentLoopTime, robot.getLatestInputs(), robot.getGaitIndex());
+    // Only rebuild the IP string when the address actually changes; toString()
+    // allocates a String, so doing it every 50Hz loop wastes heap churn.
+    IPAddress ip = WiFi.localIP();
+    if (ip != cachedIp || cachedIpStr.length() == 0) {
+        cachedIp = ip;
+        cachedIpStr = ip.toString();
+    }
+    displayMgr.updateData(cachedIpStr.c_str(), currentLoopTime, robot.getLatestInputs(), robot.getGaitIndex());
 #endif
     
     // Serial Log (every 1000ms) for debugging

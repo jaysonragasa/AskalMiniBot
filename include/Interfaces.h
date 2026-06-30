@@ -41,9 +41,9 @@ public:
     /**
      * @brief Retrieves the configuration for a specific servo.
      * @param index Servo index (0-3: Front-Left, Front-Right, Hind-Left, Hind-Right).
-     * @return The ServoConfig for that servo.
+     * @return Const reference to the ServoConfig for that servo (no copy).
      */
-    virtual ServoConfig getServoConfig(int index) = 0;
+    virtual const ServoConfig& getServoConfig(int index) = 0;
 
     /**
      * @brief Persists the configuration for a specific servo.

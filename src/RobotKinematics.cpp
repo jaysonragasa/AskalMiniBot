@@ -127,7 +127,7 @@ void RobotKinematics::onJoystickUpdate(float throttle, float yaw, float pitch, f
 // Applies logical configurations (trim, inversion, limits) to a target angle.
 // -------------------------------------------------------------------------
 int RobotKinematics::processAngle(int servoIndex, int targetAngle, bool applyLimits) {
-    ServoConfig cfg = config.getServoConfig(servoIndex);
+    const ServoConfig& cfg = config.getServoConfig(servoIndex);
     
     if (!cfg.enabled) {
         return 90; // Just stay at mechanical center if disabled in WebUI

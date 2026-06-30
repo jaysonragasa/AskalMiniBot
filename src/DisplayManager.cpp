@@ -33,14 +33,24 @@ static void smoothApproach(float& current, float target, float speed, float dt) 
 // DisplayManager Constructor
 // -------------------------------------------------------------------------
 DisplayManager::DisplayManager(IConfigRepository& configRepo) : display(OLED_WIDTH, OLED_HEIGHT, &Wire, -1), isInitialized(false), bootTime(0), config(configRepo), displayTaskHandle(NULL) {
+    stateMux = portMUX_INITIALIZER_UNLOCKED;
     currentInputs = {0,0,0,0};
-    currentIpAddress = "";
+    currentIpAddress[0] = '\0';
     currentLoopTimeMs = 0;
     currentGaitIndex = -1;
     
     currentEmotion = EyeEmotion::IDLE;
     lastInputTime = 0;
     lastWanderChange = 0;
+    
+    // Weather state defaults (must be initialized; read by the Core 0 task before
+    // the first successful fetch). lastWeatherFetch == 0 forces a fetch on first
+    // entry to the Info pose.
+    weatherTemp = "";
+    weatherCond = "";
+    locationName = "";
+    lastWeatherFetch = 0;
+    weatherAnimTime = 0.0f;
     
     EyeParams defaultEye = {0, 0, 30, 40, 8};
     leftEyeTarget = defaultEye;
@@ -94,13 +104,20 @@ void DisplayManager::begin() {
 
 // -------------------------------------------------------------------------
 // DisplayManager::updateData
-// Updates shared state variables from the main core.
+// Updates shared state variables from the main core (Core 1). Copies happen
+// inside a short critical section so the Core 0 render task never observes a
+// half-written IP string.
 // -------------------------------------------------------------------------
-void DisplayManager::updateData(const String& ipAddress, uint32_t loopTimeMs, const JoystickData& inputs, int gaitIndex) {
-    currentIpAddress = ipAddress;
+void DisplayManager::updateData(const char* ipAddress, uint32_t loopTimeMs, const JoystickData& inputs, int gaitIndex) {
+    portENTER_CRITICAL(&stateMux);
+    if (ipAddress) {
+        strncpy(currentIpAddress, ipAddress, sizeof(currentIpAddress) - 1);
+        currentIpAddress[sizeof(currentIpAddress) - 1] = '\0';
+    }
     currentLoopTimeMs = loopTimeMs;
     currentInputs = inputs;
     currentGaitIndex = gaitIndex;
+    portEXIT_CRITICAL(&stateMux);
 }
 
 // -------------------------------------------------------------------------
@@ -127,10 +144,17 @@ void DisplayManager::displayTask(void* parameter) {
                 self->display.println(F("Askal"));
                 self->display.println(F("Mini Bot"));
                 
+                // Snapshot the IP under the lock so we don't print a half-updated buffer.
+                char ipCopy[20];
+                portENTER_CRITICAL(&self->stateMux);
+                strncpy(ipCopy, self->currentIpAddress, sizeof(ipCopy));
+                portEXIT_CRITICAL(&self->stateMux);
+                ipCopy[sizeof(ipCopy) - 1] = '\0';
+                
                 self->display.setTextSize(1);
                 self->display.setCursor(0, 40);
                 self->display.print(F("IP: "));
-                self->display.println(self->currentIpAddress);
+                self->display.println(ipCopy);
                 
                 self->display.setCursor(0, 50);
                 self->display.print(F("Loop: "));

@@ -51,8 +51,12 @@ private:
     TaskHandle_t displayTaskHandle;
     
     // Shared state variables
+    // These are written by the main loop (Core 1) via updateData() and read by
+    // the render task (Core 0). Access to currentIpAddress is guarded by
+    // stateMux because String/char-buffer access is not atomic across cores.
+    portMUX_TYPE stateMux; ///< Spinlock protecting cross-core shared state.
     JoystickData currentInputs;
-    String currentIpAddress;
+    char currentIpAddress[20]; ///< IPv4 string buffer (e.g. "255.255.255.255" + NUL).
     uint32_t currentLoopTimeMs;
     int currentGaitIndex;
     
@@ -131,10 +135,11 @@ public:
     /**
      * @brief Updates the shared state data used by the display task.
      * Called from the main loop (Core 1) to pass data to the display manager (Core 0).
-     * @param ipAddress Current WiFi IP address.
+     * Thread-safe: copies are made under the stateMux spinlock.
+     * @param ipAddress Current WiFi IP address as a C string.
      * @param loopTimeMs Main loop execution time.
      * @param inputs Current joystick inputs.
      * @param gaitIndex Active gait/pose index.
      */
-    void updateData(const String& ipAddress, uint32_t loopTimeMs, const JoystickData& inputs, int gaitIndex);
+    void updateData(const char* ipAddress, uint32_t loopTimeMs, const JoystickData& inputs, int gaitIndex);
 };

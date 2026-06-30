@@ -29,9 +29,9 @@ public:
     /**
      * @brief Retrieves the configuration for a specific servo.
      * @param index Servo index (0-3).
-     * @return The ServoConfig struct containing pin, offset, etc.
+     * @return Const reference to the cached ServoConfig (no copy).
      */
-    ServoConfig getServoConfig(int index) override;
+    const ServoConfig& getServoConfig(int index) override;
 
     /**
      * @brief Saves the configuration for a specific servo to NVS.
