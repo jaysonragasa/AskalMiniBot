@@ -1,10 +1,10 @@
 #pragma once
 #include "Interfaces.h"
-#include <ESP32Servo.h>
+#include <Arduino.h>
 
 /**
  * @class HardwareServoDriver
- * @brief Implementation of IServoDriver using ESP32Servo library.
+ * @brief Implementation of IServoDriver using ESP32 native LEDC hardware.
  * 
  * Maps logical servo indices (0-3) to physical PWM pins and handles the hardware 
  * timers required for the ESP32.
@@ -54,5 +54,5 @@ public:
     void write(int index, int angle) override;
 
 private:
-    Servo servos[4]; ///< Hardware servo objects.
+    int servoPins[4]; ///< Hardware servo pins.
 };

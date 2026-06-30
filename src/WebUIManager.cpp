@@ -198,10 +198,10 @@ const char index_html[] PROGMEM = R"rawliteral(
     managerLeft.on('move', (evt, data) => { 
       if (data && data.vector) {
         joys.yaw = data.vector.x * 100;
-        joys.throttle = data.vector.y * 100;
+        joys.throttle = -data.vector.y * 100; // Inverted for correct forward kinematics
       } else if (data && data.angle && data.distance != null) {
         joys.yaw = Math.cos(data.angle.radian) * (data.distance / 50) * 100; 
-        joys.throttle = Math.sin(data.angle.radian) * (data.distance / 50) * 100; 
+        joys.throttle = -Math.sin(data.angle.radian) * (data.distance / 50) * 100; // Inverted
       }
       idleSent = false;
     });

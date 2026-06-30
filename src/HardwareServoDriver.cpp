@@ -1,73 +1,70 @@
 /**
  * @file HardwareServoDriver.cpp
- * @brief IServoDriver implementation using the ESP32Servo library.
+ * @brief IServoDriver implementation using native ESP32 LEDC.
  *
- * Allocates the four ESP32 PWM timers and maps logical leg indices (0-3) to
- * physical GPIO pins, driving standard 50Hz analog servos.
+ * Bypasses the ESP32Servo library to avoid MCPWM LoadProhibited panics on ESP32-S3.
+ * Automatically supports both Arduino Core 2.x and 3.x LEDC APIs.
  */
 
 #include "HardwareServoDriver.h"
 
-// -------------------------------------------------------------------------
-// HardwareServoDriver Constructor
-// -------------------------------------------------------------------------
-HardwareServoDriver::HardwareServoDriver() {}
-
-// -------------------------------------------------------------------------
-// HardwareServoDriver::begin
-// Allocates PWM timers needed for servo control.
-// -------------------------------------------------------------------------
-void HardwareServoDriver::begin() {
-    // -------------------------------------------------------------------------
-    // ESP32 requires explicit PWM timer allocation for servos.
-    // We need 4 timers for our 4 legs.
-    // -------------------------------------------------------------------------
-    ESP32PWM::allocateTimer(0);
-    ESP32PWM::allocateTimer(1);
-    ESP32PWM::allocateTimer(2);
-    ESP32PWM::allocateTimer(3);
+HardwareServoDriver::HardwareServoDriver() {
+    for (int i = 0; i < 4; i++) {
+        servoPins[i] = -1;
+    }
 }
 
-// -------------------------------------------------------------------------
-// HardwareServoDriver::attach
-// Attaches a servo to a specific GPIO pin.
-// -------------------------------------------------------------------------
+void HardwareServoDriver::begin() {
+    // No global timer allocation needed for native LEDC.
+}
+
 void HardwareServoDriver::attach(int index, int pin) {
     if (index >= 0 && index < 4) {
-        // Standard analog servos operate at 50Hz (20ms period).
-        servos[index].setPeriodHertz(50);
-        // Attach to pin with standard pulse widths: 500us (0deg) to 2500us (180deg)
-        servos[index].attach(pin, 500, 2500);
+        servoPins[index] = pin;
+#if ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)
+        // Core 3.x API
+        ledcAttach(pin, 50, 14); // 50Hz, 14-bit
+#else
+        // Core 2.x API
+        ledcSetup(index, 50, 14); // Use index as channel (0-3)
+        ledcAttachPin(pin, index);
+#endif
     }
 }
 
-// -------------------------------------------------------------------------
-// HardwareServoDriver::detach
-// Detaches a servo from its GPIO pin.
-// -------------------------------------------------------------------------
 void HardwareServoDriver::detach(int index) {
-    if (index >= 0 && index < 4 && servos[index].attached()) {
-        servos[index].detach();
+    if (index >= 0 && index < 4 && servoPins[index] >= 0) {
+#if ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)
+        ledcDetach(servoPins[index]);
+#else
+        ledcDetachPin(servoPins[index]);
+#endif
+        servoPins[index] = -1;
     }
 }
 
-// -------------------------------------------------------------------------
-// HardwareServoDriver::isAttached
-// Checks if a servo is currently attached.
-// -------------------------------------------------------------------------
 bool HardwareServoDriver::isAttached(int index) {
     if (index >= 0 && index < 4) {
-        return servos[index].attached();
+        return servoPins[index] >= 0;
     }
     return false;
 }
 
-// -------------------------------------------------------------------------
-// HardwareServoDriver::write
-// Commands a servo to a specific angle.
-// -------------------------------------------------------------------------
 void HardwareServoDriver::write(int index, int angle) {
-    if (index >= 0 && index < 4) {
-        servos[index].write(angle);
+    if (index >= 0 && index < 4 && servoPins[index] >= 0) {
+        if (angle < 0) angle = 0;
+        if (angle > 180) angle = 180;
+        
+        // 50Hz = 20ms = 20000us
+        // 14-bit resolution = max duty 16383
+        // 500us = (500/20000) * 16383 = 410
+        // 2500us = (2500/20000) * 16383 = 2048
+        int duty = map(angle, 0, 180, 410, 2048);
+        
+#if ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)
+        ledcWrite(servoPins[index], duty);
+#else
+        ledcWrite(index, duty);
+#endif
     }
 }
