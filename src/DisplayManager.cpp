@@ -136,7 +136,7 @@ void DisplayManager::displayTask(void* parameter) {
                 self->display.print(F("Loop: "));
                 self->display.print(self->currentLoopTimeMs);
                 self->display.println(F(" ms"));
-            } else if (self->currentGaitIndex == 8) { // INFO pose
+            } else if (self->currentGaitIndex == 9) { // INFO pose (index 9 in allGaits[])
                 if (self->lastWeatherFetch == 0 || now - self->lastWeatherFetch > 600000) {
                     // Fetch every 10 mins or on first entry
                     self->display.clearDisplay();
@@ -183,9 +183,9 @@ void DisplayManager::updateEyeLogic(float dt) {
     // -------------------------------------------------------------------------
     // EMOTION STATE MACHINE
     // -------------------------------------------------------------------------
-    if (currentGaitIndex == 6) { // Pee
+    if (currentGaitIndex == 7) { // Pee (index 7 in allGaits[])
         currentEmotion = EyeEmotion::HAPPY;
-    } else if (currentGaitIndex == 7) { // Scrape
+    } else if (currentGaitIndex == 8) { // Scrape (index 8 in allGaits[])
         currentEmotion = EyeEmotion::ANGRY;
     } else if (hasInput) {
         // If user is controlling the robot, eyes should lock forward (IDLE)

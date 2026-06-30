@@ -83,6 +83,10 @@ When you introduce a new tuned value, document it the same way: include the rati
 - **New method on an existing class**: add the `@brief`/`@param`/`@return` block in the header and a matching banner in the source.
 - Keep comments factual and current. A wrong comment is worse than none.
 
-## Known doc/code drift to watch
+## Gait index alignment (resolved)
 
-`DisplayManager.cpp` references gait indices (`currentGaitIndex == 6` Pee, `== 7` Scrape, `== 8` INFO) that do **not** match the canonical order in `main.cpp`'s `allGaits[]` (wave=6, pee=7, scrape=8, info=9). The comments and the magic numbers there are stale. If you touch gait indexing or this emotion/weather logic, reconcile these against `main.cpp` and fix both the values and their comments rather than copying the existing ones.
+`DisplayManager.cpp` keys its emotion/weather logic off gait indices. These were
+once stale (read 6/7/8 against an older ordering) but are now aligned with
+`main.cpp`'s `allGaits[]`: Pee=7 (HAPPY), Scrape=8 (ANGRY), Info=9 (weather).
+When you touch gait indexing or this emotion/weather logic, reconcile any magic
+numbers against `allGaits[]` and keep both the values and their comments in sync.
