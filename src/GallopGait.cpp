@@ -24,9 +24,9 @@ void GallopGait::calculate(float dt, const JoystickData& inputs, int servoAngles
         int pitchOffset = inputs.pitch * 0.3f;
         int rollOffset = inputs.roll * 0.3f;
         
-        // Base standing angle includes the +20 front offset.
-        servoAngles[0] = 110 + pitchOffset + rollOffset;
-        servoAngles[1] = 110 + pitchOffset - rollOffset;
+        // Base standing angle includes the -20 front offset.
+        servoAngles[0] = 70 + pitchOffset + rollOffset;
+        servoAngles[1] = 70 + pitchOffset - rollOffset;
         servoAngles[2] = 90 - pitchOffset + rollOffset;
         servoAngles[3] = 90 - pitchOffset - rollOffset;
         return;
