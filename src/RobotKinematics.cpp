@@ -31,10 +31,14 @@ void RobotKinematics::begin() {
 
 // -------------------------------------------------------------------------
 // RobotKinematics::onConfigUpdated
-// Callback when configuration changes. Re-homes the servos.
+// Callback when configuration changes.
 // -------------------------------------------------------------------------
 void RobotKinematics::onConfigUpdated() {
-    reattachServos();
+    // We intentionally do NOT call reattachServos() here.
+    // Reattaching causes a 1.2s delay (300ms per servo) which makes Web UI
+    // offset calibration sliders feel unresponsive. 
+    // The new offsets/inversions are automatically read by processAngle() in tick().
+    // If a physical pin is changed, a reboot will be required.
 }
 
 // -------------------------------------------------------------------------
