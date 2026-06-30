@@ -33,7 +33,7 @@
 // Concrete implementations of the storage and hardware interfaces. These have
 // no dependencies on the higher-level components and are injected into them.
 // -------------------------------------------------------------------------
-PreferencesConfig configRepo;     ///< NVS-backed configuration store.
+PreferencesConfig* configRepo = nullptr; ///< NVS-backed configuration store.
 HardwareServoDriver servoDriver;  ///< ESP32Servo-backed physical servo driver.
 
 // -------------------------------------------------------------------------
@@ -61,10 +61,10 @@ int numGaits = sizeof(allGaits) / sizeof(allGaits[0]); ///< Number of entries in
 // HIGH-LEVEL COMPONENTS
 // Constructed with their dependencies injected (composition root pattern).
 // -------------------------------------------------------------------------
-RobotKinematics robot(servoDriver, configRepo, allGaits, numGaits); ///< Core motion engine.
-WebUIManager webUI(robot, configRepo);                              ///< WiFi web/WebSocket controller.
+RobotKinematics* robot = nullptr; ///< Core motion engine.
+WebUIManager* webUI = nullptr;    ///< WiFi web/WebSocket controller.
 #ifdef ENABLE_OLED_DISPLAY
-DisplayManager displayMgr(configRepo);                              ///< Optional OLED (Core 0 task).
+DisplayManager* displayMgr = nullptr; ///< Optional OLED (Core 0 task).
 #endif
 
 unsigned long lastOledUpdate = 0; ///< Reserved: timestamp of last OLED refresh.
@@ -83,19 +83,20 @@ void setup() {
     delay(2000); 
     Serial.println("\nAskalMiniBot Starting...");
 
-    // -------------------------------------------------------------------------
-    // 1. HARDWARE INITIALIZATION
-    // -------------------------------------------------------------------------
+    configRepo = new PreferencesConfig();
+
     // Initialize display early to show boot status
 #ifdef ENABLE_OLED_DISPLAY
-    displayMgr.begin();
+    displayMgr = new DisplayManager(*configRepo);
+    displayMgr->begin();
 #endif
 
     // Load saved servo calibration and API keys from non-volatile storage
-    configRepo.begin();
+    configRepo->begin();
 
     // Initialize kinematics (which attaches and homes servos)
-    robot.begin();
+    robot = new RobotKinematics(servoDriver, *configRepo, allGaits, numGaits);
+    robot->begin();
 
     // -------------------------------------------------------------------------
     // 2. NETWORK INITIALIZATION
@@ -114,7 +115,8 @@ void setup() {
     Serial.printf("Boot complete! Current Loop Time: %u ms\n", currentLoopTime);
 
     // Initialize WebUI
-    webUI.begin();
+    webUI = new WebUIManager(*robot, *configRepo);
+    webUI->begin();
 
     // Initialize OTA
     ArduinoOTA.setHostname("AskalMiniBot");
@@ -150,7 +152,7 @@ void loop() {
     // 1. HANDLE EXTERNAL EVENTS
     // -------------------------------------------------------------------------
     // Process incoming WebSocket messages (joystick inputs, config changes)
-    webUI.loop();
+    webUI->loop();
 
     // Handle Over-The-Air (OTA) firmware updates
     ArduinoOTA.handle();
@@ -159,14 +161,14 @@ void loop() {
     // 2. CORE ROBOTICS LOGIC
     // -------------------------------------------------------------------------
     // Calculate new servo angles and execute transitions
-    robot.tick();
+    robot->tick();
 
     // -------------------------------------------------------------------------
     // 3. UI AND LOGGING
     // -------------------------------------------------------------------------
     // Feed latest data to DisplayManager (it actually renders on Core 0 automatically)
 #ifdef ENABLE_OLED_DISPLAY
-    displayMgr.updateData(WiFi.localIP().toString(), currentLoopTime, robot.getLatestInputs(), robot.getGaitIndex());
+    displayMgr->updateData(WiFi.localIP().toString(), currentLoopTime, robot->getLatestInputs(), robot->getGaitIndex());
 #endif
     
     // Serial Log (every 1000ms) for debugging
