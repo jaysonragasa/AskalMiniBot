@@ -1,3 +1,12 @@
+/**
+ * @file PreferencesConfig.cpp
+ * @brief IConfigRepository implementation backed by ESP32 NVS (Preferences).
+ *
+ * Loads factory defaults on first boot, then caches servo configs in RAM and
+ * persists changes to the "minibot" NVS namespace so calibration and weather
+ * settings survive reboots.
+ */
+
 #include "PreferencesConfig.h"
 #include "config.h"
 

@@ -1,3 +1,8 @@
+/**
+ * @file AutoGait.cpp
+ * @brief Auto gait implementation: parametrically blends Walk and Gallop by speed.
+ */
+
 #include "AutoGait.h"
 #include <math.h>
 #include <stdlib.h>
@@ -9,6 +14,7 @@ AutoGait::AutoGait() : phase(0.0f) {}
 
 // -------------------------------------------------------------------------
 // AutoGait::reset
+// Resets the animation phase so the blended gait starts cleanly when selected.
 // -------------------------------------------------------------------------
 void AutoGait::reset() {
     phase = 0.0f;
@@ -16,13 +22,22 @@ void AutoGait::reset() {
 
 // -------------------------------------------------------------------------
 // AutoGait::calculate
+// Computes servo angles by parametrically blending Walk and Gallop based on
+// the commanded speed, giving a smooth low-to-high speed transition.
 // -------------------------------------------------------------------------
 void AutoGait::calculate(float dt, const JoystickData& inputs, int servoAngles[4]) {
-    // 1. Calculate raw speed factor
+    // -------------------------------------------------------------------------
+    // 1. SPEED FACTOR
+    // Magnitude of the throttle/yaw vector, normalized and clamped to 0..1.
+    // -------------------------------------------------------------------------
     float speed = sqrt(inputs.throttle * inputs.throttle + inputs.yaw * inputs.yaw) / 100.0f;
     if (speed > 1.0f) speed = 1.0f;
     
+    // -------------------------------------------------------------------------
     // 2. IDLE CHECK
+    // Below 5% speed, stop cycling and hold the Walk stance, allowing the user
+    // to tilt the stationary robot with pitch/roll.
+    // -------------------------------------------------------------------------
     if (speed < 0.05f) {
         phase = 0.0f;
         int pitchOffset = inputs.pitch * 0.3f;
@@ -36,15 +51,23 @@ void AutoGait::calculate(float dt, const JoystickData& inputs, int servoAngles[4
         return;
     }
     
+    // -------------------------------------------------------------------------
     // 3. BLEND FACTOR (0.0 = Walk, 1.0 = Gallop)
-    // We start transitioning above 0.4 speed, fully gallop at 0.8 speed
+    // We start transitioning above 0.7 speed, fully gallop at 0.9 speed.
+    // The 0.2 divisor is the width of the blend window (0.9 - 0.7).
+    // -------------------------------------------------------------------------
     float blendFactor = 0.0f;
-    if (speed > 0.4f) {
-        blendFactor = (speed - 0.4f) / 0.4f;
+    if (speed > 0.7f) {
+        blendFactor = (speed - 0.7f) / 0.2f;
     }
     if (blendFactor > 1.0f) blendFactor = 1.0f;
     
+    // -------------------------------------------------------------------------
     // 4. PARAMETRIC BLENDING
+    // Every gait parameter (phase speed, amplitude, per-leg phase offsets, and
+    // base stance) is linearly interpolated between its Walk and Gallop value
+    // using blendFactor, so the gait morphs continuously instead of snapping.
+    // -------------------------------------------------------------------------
     // Phase speed: Walk is 6, Gallop is 15
     float walkPhaseSpeed = 6.0f;
     float gallopPhaseSpeed = 15.0f;
@@ -94,7 +117,10 @@ void AutoGait::calculate(float dt, const JoystickData& inputs, int servoAngles[4
     float gallopBaseFront = -20.0f;
     float baseFrontOffset = walkBaseFront + (gallopBaseFront - walkBaseFront) * blendFactor;
     
+    // -------------------------------------------------------------------------
     // 5. FINAL ANGLE CALCULATION
+    // Apply the blended swing to the blended base stance for each leg.
+    // -------------------------------------------------------------------------
     servoAngles[0] = (90 + baseFrontOffset) + fl * leftAmp;
     servoAngles[1] = (90 + baseFrontOffset) + fr * rightAmp;
     servoAngles[2] = 90 + hl * leftAmp;

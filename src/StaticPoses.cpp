@@ -1,3 +1,12 @@
+/**
+ * @file StaticPoses.cpp
+ * @brief Implementations of the static and animated poses (IGaitStrategy).
+ *
+ * Covers Sit, Stretch, Wave, Pee, Scrape, and Info. These ignore the safety
+ * limits (applyLimits() == false) so legs can fold/extend beyond the normal
+ * walking range, and apply a gentle pitch/roll tilt from the joystick.
+ */
+
 #include "StaticPoses.h"
 #include <math.h>
 // -------------------------------------------------------------------------

@@ -1,3 +1,14 @@
+/**
+ * @file main.cpp
+ * @brief Application entry point and composition root for AskalMiniBot.
+ *
+ * This file wires the SOLID-decomposed modules together using constructor
+ * injection: it instantiates every concrete implementation, assembles the
+ * ordered array of gaits/poses, and injects the dependencies into the
+ * high-level RobotKinematics and WebUIManager. It then runs hardware/network
+ * init in setup() and the fixed-rate control loop in loop().
+ */
+
 #include <Arduino.h>
 #include <WiFi.h>
 #include <ArduinoOTA.h>
@@ -17,9 +28,19 @@
 #include "DisplayManager.h"
 #endif
 
-// Instantiate dependencies
-PreferencesConfig configRepo;
-HardwareServoDriver servoDriver;
+// -------------------------------------------------------------------------
+// LEAF DEPENDENCIES
+// Concrete implementations of the storage and hardware interfaces. These have
+// no dependencies on the higher-level components and are injected into them.
+// -------------------------------------------------------------------------
+PreferencesConfig configRepo;     ///< NVS-backed configuration store.
+HardwareServoDriver servoDriver;  ///< ESP32Servo-backed physical servo driver.
+
+// -------------------------------------------------------------------------
+// GAIT & POSE STRATEGIES
+// One instance per IGaitStrategy implementation. Order here defines the index
+// used by the Web UI (set_mode) and getGaitIndex(); keep allGaits[] in sync.
+// -------------------------------------------------------------------------
 TrotGait trotGait;
 WalkGait walkGait;
 GallopGait gallopGait;
@@ -31,21 +52,31 @@ PeePose peePose;
 ScrapePose scrapePose;
 InfoPose infoPose;
 
+/// Ordered registry of all selectable gaits/poses. Index = Web UI mode number:
+/// 0 Trot, 1 Walk, 2 Gallop, 3 Auto, 4 Sit, 5 Stretch, 6 Wave, 7 Pee, 8 Scrape, 9 Info.
 IGaitStrategy* allGaits[] = { &trotGait, &walkGait, &gallopGait, &autoGait, &sitPose, &stretchPose, &wavePose, &peePose, &scrapePose, &infoPose };
-int numGaits = sizeof(allGaits) / sizeof(allGaits[0]);
+int numGaits = sizeof(allGaits) / sizeof(allGaits[0]); ///< Number of entries in allGaits[].
 
-// High-level components injected with dependencies
-RobotKinematics robot(servoDriver, configRepo, allGaits, numGaits);
-WebUIManager webUI(robot, configRepo);
+// -------------------------------------------------------------------------
+// HIGH-LEVEL COMPONENTS
+// Constructed with their dependencies injected (composition root pattern).
+// -------------------------------------------------------------------------
+RobotKinematics robot(servoDriver, configRepo, allGaits, numGaits); ///< Core motion engine.
+WebUIManager webUI(robot, configRepo);                              ///< WiFi web/WebSocket controller.
 #ifdef ENABLE_OLED_DISPLAY
-DisplayManager displayMgr(configRepo);
+DisplayManager displayMgr(configRepo);                              ///< Optional OLED (Core 0 task).
 #endif
 
-unsigned long lastOledUpdate = 0;
-unsigned long lastLoopTick = 0;
-unsigned long lastSerialLog = 0;
-uint32_t currentLoopTime = 0;
+unsigned long lastOledUpdate = 0; ///< Reserved: timestamp of last OLED refresh.
+unsigned long lastLoopTick = 0;   ///< Reserved: timestamp of last loop tick.
+unsigned long lastSerialLog = 0;  ///< Timestamp of the last 1Hz serial status log.
+uint32_t currentLoopTime = 0;     ///< Measured execution time of the last loop iteration (ms).
 
+// -------------------------------------------------------------------------
+// setup
+// One-time boot sequence: brings up hardware (display, config, servos), then
+// the network (WiFi STA), then the web UI and OTA update services.
+// -------------------------------------------------------------------------
 void setup() {
     Serial.begin(115200);
     // Add small delay to allow serial to connect via USB CDC if needed
@@ -107,6 +138,11 @@ void setup() {
     ArduinoOTA.begin();
 }
 
+// -------------------------------------------------------------------------
+// loop
+// Fixed-rate control loop (~50Hz). Each iteration services external events,
+// advances the kinematics, refreshes UI/logging, then sleeps to hold cadence.
+// -------------------------------------------------------------------------
 void loop() {
     unsigned long loopStart = millis();
 

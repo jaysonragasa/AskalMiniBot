@@ -1,3 +1,8 @@
+/**
+ * @file TrotGait.cpp
+ * @brief Trot gait implementation: diagonal leg pairs move together, 180 deg apart.
+ */
+
 #include "TrotGait.h"
 #include <math.h>
 #include <stdlib.h>

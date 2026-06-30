@@ -1,3 +1,13 @@
+/**
+ * @file WebUIManager.cpp
+ * @brief Web UI implementation: serves the single-page controller and routes
+ *        incoming WebSocket JSON commands to the kinematics and config layers.
+ *
+ * The entire browser frontend (HTML/CSS/JS) is embedded as a PROGMEM raw string
+ * literal (index_html) and served from flash. Control happens over a WebSocket
+ * at "/ws"; see handleWebSocketMessage for the supported message types.
+ */
+
 #include "WebUIManager.h"
 #include <ArduinoJson.h>
 

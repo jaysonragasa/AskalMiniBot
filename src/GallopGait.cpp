@@ -1,3 +1,8 @@
+/**
+ * @file GallopGait.cpp
+ * @brief Gallop/bounding gait: front pair and hind pair bound, offset by 3*PI/4.
+ */
+
 #include "GallopGait.h"
 #include <math.h>
 #include <stdlib.h>

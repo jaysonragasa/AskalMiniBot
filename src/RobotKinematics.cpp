@@ -1,3 +1,12 @@
+/**
+ * @file RobotKinematics.cpp
+ * @brief Core motion engine implementation.
+ *
+ * Selects the active IGaitStrategy, runs the folded-pose stretch transition
+ * state machine, applies stationary pitch/roll overrides, and maps logical
+ * target angles to safe physical servo commands via processAngle().
+ */
+
 #include "RobotKinematics.h"
 #include <Arduino.h>
 

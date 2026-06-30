@@ -1,3 +1,13 @@
+/**
+ * @file DisplayManager.cpp
+ * @brief OLED rendering implementation running on a dedicated FreeRTOS task (Core 0).
+ *
+ * Renders procedural "eyes" with an emotion state machine, a boot splash, and an
+ * OpenWeather screen. The render task is pinned to Core 0 so its blocking I2C
+ * writes and HTTP weather fetches never introduce jitter into the servo PWM /
+ * kinematics loop running on Core 1. Shared state is published via updateData().
+ */
+
 #include "DisplayManager.h"
 #include "config.h"
 #include <Wire.h>
@@ -5,9 +15,16 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 
-// Helper for smooth exponential interpolation
-// Calculates a percentage (speed * dt) of the distance between current and target,
-// and moves 'current' by that amount. This creates a natural, ease-out animation curve.
+/**
+ * @brief Smooth exponential interpolation toward a target (ease-out).
+ *
+ * Moves @p current a fraction (speed * dt) of the remaining distance to
+ * @p target each call, producing a natural ease-out animation curve.
+ * @param current Reference to the value being animated; updated in place.
+ * @param target The value to approach.
+ * @param speed Interpolation rate (higher converges faster).
+ * @param dt Delta time in seconds since the last update.
+ */
 static void smoothApproach(float& current, float target, float speed, float dt) {
     current += (target - current) * speed * dt;
 }

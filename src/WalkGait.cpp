@@ -1,3 +1,8 @@
+/**
+ * @file WalkGait.cpp
+ * @brief Walk gait implementation: stable 4-beat motion with legs offset by PI/2.
+ */
+
 #include "WalkGait.h"
 #include <math.h>
 #include <stdlib.h>

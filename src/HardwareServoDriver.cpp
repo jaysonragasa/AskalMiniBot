@@ -1,3 +1,11 @@
+/**
+ * @file HardwareServoDriver.cpp
+ * @brief IServoDriver implementation using the ESP32Servo library.
+ *
+ * Allocates the four ESP32 PWM timers and maps logical leg indices (0-3) to
+ * physical GPIO pins, driving standard 50Hz analog servos.
+ */
+
 #include "HardwareServoDriver.h"
 
 // -------------------------------------------------------------------------
