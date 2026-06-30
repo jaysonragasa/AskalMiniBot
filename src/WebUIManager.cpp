@@ -355,9 +355,15 @@ void WebUIManager::handleWebSocketMessage(void *arg, uint8_t *data, size_t len, 
     
     // Check that we received a complete text frame
     if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
-        // Safely deserialize without modifying the original buffer
+        // Safely copy data into a String to guarantee null-termination and prevent zero-copy mutation
+        String jsonPayload;
+        jsonPayload.reserve(len);
+        for (size_t i = 0; i < len; i++) {
+            jsonPayload += (char)data[i];
+        }
+        
         JsonDocument doc;
-        DeserializationError error = deserializeJson(doc, data, len);
+        DeserializationError error = deserializeJson(doc, jsonPayload);
         if (error) {
             Serial.printf("JSON parse failed: %s\n", error.c_str());
             return; // Ignore malformed JSON
