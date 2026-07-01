@@ -138,4 +138,9 @@ public:
      * @param gaitIndex Active gait/pose index.
      */
     void updateData(const String& ipAddress, uint32_t loopTimeMs, const JoystickData& inputs, int gaitIndex);
+
+    /**
+     * @brief Pauses the display task and shows an updating message.
+     */
+    void pause();
 };

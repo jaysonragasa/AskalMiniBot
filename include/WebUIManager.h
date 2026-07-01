@@ -35,6 +35,11 @@ public:
      */
     void loop(); 
 
+    /**
+     * @brief Stops the web server and closes all active WebSocket connections.
+     */
+    void end();
+
 private:
     AsyncWebServer server;
     AsyncWebSocket ws;

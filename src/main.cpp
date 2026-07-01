@@ -123,6 +123,14 @@ void setup() {
     ArduinoOTA.setHostname("AskalMiniBot");
     ArduinoOTA.onStart([]() {
         Serial.println("Start updating");
+#ifdef ENABLE_OLED_DISPLAY
+        if (displayMgr != nullptr) {
+            displayMgr->pause();
+        }
+#endif
+        if (webUI != nullptr) {
+            webUI->end();
+        }
     });
     ArduinoOTA.onEnd([]() {
         Serial.println("\nEnd");

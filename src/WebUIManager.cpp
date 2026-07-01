@@ -429,3 +429,8 @@ void WebUIManager::handleWebSocketMessage(void *arg, uint8_t *data, size_t len, 
         }
     }
 }
+
+void WebUIManager::end() {
+    ws.closeAll();
+    server.end();
+}

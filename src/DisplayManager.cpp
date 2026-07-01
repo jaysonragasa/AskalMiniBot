@@ -480,3 +480,21 @@ void DisplayManager::renderWeather() {
         drawCloud(iconX, iconY, weatherAnimTime);
     }
 }
+
+void DisplayManager::pause() {
+    if (displayTaskHandle != NULL) {
+        vTaskSuspend(displayTaskHandle);
+    }
+    if (isInitialized) {
+        display.clearDisplay();
+        display.setTextSize(2);
+        display.setTextColor(SSD1306_WHITE);
+        display.setCursor(0, 10);
+        display.println(F("OTA UPDATE"));
+        display.setTextSize(1);
+        display.setCursor(0, 35);
+        display.println(F("Updating..."));
+        display.println(F("Do not power off."));
+        display.display();
+    }
+}
