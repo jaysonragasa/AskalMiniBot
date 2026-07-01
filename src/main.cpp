@@ -47,14 +47,15 @@ GallopGait gallopGait;
 AutoGait autoGait;
 SitPose sitPose;
 StretchPose stretchPose;
+FoldPose foldPose;
 WavePose wavePose;
 PeePose peePose;
 ScrapePose scrapePose;
 InfoPose infoPose;
 
 /// Ordered registry of all selectable gaits/poses. Index = Web UI mode number:
-/// 0 Trot, 1 Walk, 2 Gallop, 3 Auto, 4 Sit, 5 Stretch, 6 Wave, 7 Pee, 8 Scrape, 9 Info.
-IGaitStrategy* allGaits[] = { &trotGait, &walkGait, &gallopGait, &autoGait, &sitPose, &stretchPose, &wavePose, &peePose, &scrapePose, &infoPose };
+/// 0 Trot, 1 Walk, 2 Gallop, 3 Auto, 4 Sit, 5 Stretch, 6 Fold, 7 Wave, 8 Pee, 9 Scrape, 10 Info.
+IGaitStrategy* allGaits[] = { &trotGait, &walkGait, &gallopGait, &autoGait, &sitPose, &stretchPose, &foldPose, &wavePose, &peePose, &scrapePose, &infoPose };
 int numGaits = sizeof(allGaits) / sizeof(allGaits[0]); ///< Number of entries in allGaits[].
 
 // -------------------------------------------------------------------------

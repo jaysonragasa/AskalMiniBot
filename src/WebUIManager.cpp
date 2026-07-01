@@ -38,7 +38,7 @@ const char index_html[] PROGMEM = R"rawliteral(
     #control.active { display: block; overflow: hidden; padding: 0; position: relative; }
     
     .joystick-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0 5%; box-sizing: border-box; z-index: 100; pointer-events: none; }
-    #left-zone, #right-zone { width: 170px; height: 170px; background: rgba(255, 255, 255, 0.05); border-radius: 50%; border: 2px solid #444; position: relative; touch-action: none; pointer-events: auto; }
+    #left-zone, #right-zone { width: 200px; height: 200px; background: rgba(255, 255, 255, 0.05); border-radius: 50%; border: 2px solid #444; position: relative; touch-action: none; pointer-events: auto; }
     
     .center-controls { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 150; pointer-events: none; }
     
@@ -94,12 +94,13 @@ const char index_html[] PROGMEM = R"rawliteral(
       <div class="mode-row" style="margin-top: 15px;">
         <button class="mode-btn" onclick="setMode(4, this)">Sit</button>
         <button class="mode-btn" onclick="setMode(5, this)">Stretch</button>
-        <button class="mode-btn" onclick="setMode(6, this)">Wave</button>
+        <button class="mode-btn" onclick="setMode(6, this)">Fold</button>
+        <button class="mode-btn" onclick="setMode(7, this)">Wave</button>
       </div>
       <div class="mode-row" style="margin-top: 15px;">
-        <button class="mode-btn" onclick="setMode(7, this)">Pee</button>
-        <button class="mode-btn" onclick="setMode(8, this)">Scrape</button>
-        <button class="mode-btn" onclick="setMode(9, this)">Info</button>
+        <button class="mode-btn" onclick="setMode(8, this)">Pee</button>
+        <button class="mode-btn" onclick="setMode(9, this)">Scrape</button>
+        <button class="mode-btn" onclick="setMode(10, this)">Info</button>
       </div>
     </div>
   </div>
@@ -190,18 +191,18 @@ const char index_html[] PROGMEM = R"rawliteral(
     }
 
     // Init Joysticks
-    let optionsLeft = { zone: document.getElementById('left-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: '#00ffcc' };
-    let optionsRight = { zone: document.getElementById('right-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: '#00ffcc' };
+    let optionsLeft = { zone: document.getElementById('left-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: '#00ffcc', size: 200 };
+    let optionsRight = { zone: document.getElementById('right-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: '#00ffcc', size: 200 };
     let managerLeft = nipplejs.create(optionsLeft);
     let managerRight = nipplejs.create(optionsRight);
 
     managerLeft.on('move', (evt, data) => { 
       if (data && data.vector) {
-        joys.yaw = data.vector.x * 100;
-        joys.throttle = -data.vector.y * 100; // Inverted for correct forward kinematics
+        joys.yaw = -data.vector.x * 100; // Inverted
+        joys.throttle = data.vector.y * 100; 
       } else if (data && data.angle && data.distance != null) {
-        joys.yaw = Math.cos(data.angle.radian) * (data.distance / 50) * 100; 
-        joys.throttle = -Math.sin(data.angle.radian) * (data.distance / 50) * 100; // Inverted
+        joys.yaw = -Math.cos(data.angle.radian) * (data.distance / 50) * 100; // Inverted
+        joys.throttle = Math.sin(data.angle.radian) * (data.distance / 50) * 100; 
       }
       idleSent = false;
     });

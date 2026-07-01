@@ -50,6 +50,24 @@ void StretchPose::calculate(float dt, const JoystickData& inputs, int servoAngle
 }
 
 // -------------------------------------------------------------------------
+// FoldPose::calculate
+// Computes the servo angles for a completely folded-in posture.
+// -------------------------------------------------------------------------
+void FoldPose::calculate(float dt, const JoystickData& inputs, int servoAngles[4]) {
+    // -------------------------------------------------------------------------
+    // The FoldPose pulls all legs inward under the belly of the robot.
+    // Front legs point backward (150), and hind legs point forward (30).
+    // -------------------------------------------------------------------------
+    int pitchOffset = inputs.pitch * 0.2f;
+    int rollOffset = inputs.roll * 0.2f;
+    
+    servoAngles[0] = 180 + pitchOffset + rollOffset;  // Front Left (Inward)
+    servoAngles[1] = 180 + pitchOffset - rollOffset;  // Front Right (Inward)
+    servoAngles[2] = 0 - pitchOffset + rollOffset;   // Hind Left (Inward)
+    servoAngles[3] = 0 - pitchOffset - rollOffset;   // Hind Right (Inward)
+}
+
+// -------------------------------------------------------------------------
 // WavePose Constructor
 // -------------------------------------------------------------------------
 WavePose::WavePose() : phase(0.0f) {}

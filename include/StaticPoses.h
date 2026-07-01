@@ -51,6 +51,34 @@ public:
 };
 
 /**
+ * @class FoldPose
+ * @brief Pose used for shutting down, folding all legs inward under the belly.
+ */
+class FoldPose : public IGaitStrategy {
+public:
+    /**
+     * @brief Calculates the servo angles for the Fold pose.
+     * @param dt Delta time since the last frame (unused here).
+     * @param inputs Current joystick inputs.
+     * @param servoAngles Output array for calculated angles.
+     */
+    void calculate(float dt, const JoystickData& inputs, int servoAngles[4]) override;
+
+    /**
+     * @brief Returns whether mechanical safety limits should be applied.
+     * @return false (limits are ignored to allow full folding).
+     */
+    bool applyLimits() const override { return false; }
+    
+    /**
+     * @brief Indicates if this pose has legs folded under the robot.
+     * @return true, as all legs are folded inward.
+     */
+    bool isFoldedPose() const override { return true; }
+};
+
+
+/**
  * @class WavePose
  * @brief Robot sits and lifts one front leg to wave up and down.
  */

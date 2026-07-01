@@ -17,7 +17,8 @@ enum class EyeEmotion {
     CURIOUS,
     SHOCKED,
     HAPPY,
-    ANGRY
+    ANGRY,
+    SLEEPING
 };
 
 /**

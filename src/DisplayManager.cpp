@@ -136,7 +136,7 @@ void DisplayManager::displayTask(void* parameter) {
                 self->display.print(F("Loop: "));
                 self->display.print(self->currentLoopTimeMs);
                 self->display.println(F(" ms"));
-            } else if (self->currentGaitIndex == 9) { // INFO pose (index 9 in allGaits[])
+            } else if (self->currentGaitIndex == 10) { // INFO pose (index 10 in allGaits[])
                 if (self->lastWeatherFetch == 0 || now - self->lastWeatherFetch > 600000) {
                     // Fetch every 10 mins or on first entry
                     self->display.clearDisplay();
@@ -183,9 +183,11 @@ void DisplayManager::updateEyeLogic(float dt) {
     // -------------------------------------------------------------------------
     // EMOTION STATE MACHINE
     // -------------------------------------------------------------------------
-    if (currentGaitIndex == 7) { // Pee (index 7 in allGaits[])
+    if (currentGaitIndex == 6) { // Fold (index 6)
+        currentEmotion = EyeEmotion::SLEEPING;
+    } else if (currentGaitIndex == 8) { // Pee (index 8)
         currentEmotion = EyeEmotion::HAPPY;
-    } else if (currentGaitIndex == 8) { // Scrape (index 8 in allGaits[])
+    } else if (currentGaitIndex == 9) { // Scrape (index 9)
         currentEmotion = EyeEmotion::ANGRY;
     } else if (hasInput) {
         // If user is controlling the robot, eyes should lock forward (IDLE)
@@ -232,6 +234,10 @@ void DisplayManager::updateEyeLogic(float dt) {
             leftEyeTarget.height = 40;
             rightEyeTarget.height = 40;
         }
+    } else if (currentEmotion == EyeEmotion::SLEEPING) {
+        // Sleep state: eyes closed (flat) and lowered
+        leftEyeTarget = {0, 10, 30, 4, 2};
+        rightEyeTarget = {0, 10, 30, 4, 2};
     } else {
         // IDLE / LOOKING state
         leftEyeTarget = defaultLeft;
@@ -318,6 +324,20 @@ void DisplayManager::renderEyes() {
         // Draw black rectangles over the bottom half to create a smiling squint (^_^)
         display.fillRect(lx, ly + leftEyeCurrent.height/2 + 2, leftEyeCurrent.width, leftEyeCurrent.height/2, SSD1306_BLACK);
         display.fillRect(rx, ry + rightEyeCurrent.height/2 + 2, rightEyeCurrent.width, rightEyeCurrent.height/2, SSD1306_BLACK);
+    } else if (currentEmotion == EyeEmotion::SLEEPING) {
+        // Draw floating zZZZ
+        unsigned long now = millis();
+        display.setTextSize(1);
+        
+        // Animated float based on time
+        int bob = sin(now * 0.003f) * 4;
+        
+        display.setCursor(95, 15 + bob);
+        display.print("z");
+        display.setCursor(105, 10 + bob);
+        display.print("Z");
+        display.setCursor(115, 3 + bob);
+        display.print("Z");
     }
 }
 
